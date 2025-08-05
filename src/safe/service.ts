@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import type { Address, Hex } from "viem"
 import type { SafeError } from "./errors.js"
-import type { MetaTransactionData, SafeTransactionData } from "./types.js"
+import type { MetaTransactionData, OperationType, SafeTransactionData } from "./types.js"
 
 export class SafeService extends Effect.Tag("SafeService")<
   SafeService,
@@ -15,6 +15,13 @@ export class SafeService extends Effect.Tag("SafeService")<
       tx: SafeTransactionData
       signatures: Hex
     }) => Effect.Effect<MetaTransactionData, never>
+    buildSafeTransactionData: (args: {
+      safe: Address
+      to: Address
+      data: Hex
+      operation?: OperationType
+      useOnChainNonce?: boolean
+    }) => Effect.Effect<SafeTransactionData, SafeError>
     getNonce: (safe: Address) => Effect.Effect<bigint, SafeError>
     getOwners: (safe: Address) => Effect.Effect<Array<Address>, SafeError>
     getThreshold: (safe: Address) => Effect.Effect<bigint, SafeError>

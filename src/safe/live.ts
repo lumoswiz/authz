@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect"
 import { ViemClient } from "src/client/service.js"
 import { type Address, encodeFunctionData } from "viem"
 import { SAFE_PROXY_ABI } from "./abi.js"
-
+import { GAS_DEFAULTS, ZERO_ADDRESS } from "./constants.js"
 import {
   GetNonceError,
   GetOwnersError,
@@ -12,6 +12,7 @@ import {
   IsOwnerError
 } from "./errors.js"
 import { SafeService } from "./service.js"
+import { OperationType } from "./types.js"
 
 export const LiveSafeServiceLayer = Layer.effect(
   SafeService,
@@ -51,6 +52,38 @@ export const LiveSafeServiceLayer = Layer.effect(
             ]
           })
         })),
+
+      buildSafeTransactionData: ({
+        data,
+        operation = OperationType.Call,
+        safe,
+        to,
+        useOnChainNonce = true
+      }) =>
+        Effect.gen(function*() {
+          const nonce = useOnChainNonce
+            ? yield* Effect.tryPromise({
+              try: () =>
+                publicClient.readContract({
+                  address: safe,
+                  abi: SAFE_PROXY_ABI,
+                  functionName: "nonce"
+                }) as Promise<bigint>,
+              catch: (error) => new GetNonceError({ safe, cause: error })
+            })
+            : 0n
+
+          return {
+            to,
+            value: "0x0",
+            data,
+            operation,
+            ...GAS_DEFAULTS,
+            gasToken: ZERO_ADDRESS,
+            refundReceiver: ZERO_ADDRESS,
+            nonce
+          }
+        }),
 
       getNonce: (safe) =>
         Effect.tryPromise({
