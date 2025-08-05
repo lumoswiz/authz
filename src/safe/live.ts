@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect"
 import { ViemClient } from "src/client/service.js"
 import type { Address } from "viem"
 import { SAFE_PROXY_ABI } from "./abi.js"
-import { GetNonceError, GetOwnersError, GetVersionError } from "./errors.js"
+import { GetNonceError, GetOwnersError, GetVersionError, IsModuleEnabledError, IsOwnerError } from "./errors.js"
 import { SafeService } from "./service.js"
 
 export const LiveSafeServiceLayer = Layer.effect(
@@ -41,6 +41,28 @@ export const LiveSafeServiceLayer = Layer.effect(
               functionName: "VERSION"
             }) as Promise<string>,
           catch: (error) => new GetVersionError({ safe, cause: error })
+        }),
+      isModuleEnabled: ({ module, safe }) =>
+        Effect.tryPromise({
+          try: () =>
+            publicClient.readContract({
+              address: safe,
+              abi: SAFE_PROXY_ABI,
+              functionName: "isModuleEnabled",
+              args: [module]
+            }) as Promise<boolean>,
+          catch: (error) => new IsModuleEnabledError({ safe, module, cause: error })
+        }),
+      isOwner: ({ owner, safe }) =>
+        Effect.tryPromise({
+          try: () =>
+            publicClient.readContract({
+              address: safe,
+              abi: SAFE_PROXY_ABI,
+              functionName: "isOwner",
+              args: [owner]
+            }) as Promise<boolean>,
+          catch: (error) => new IsOwnerError({ safe, owner, cause: error })
         })
     }
   })
