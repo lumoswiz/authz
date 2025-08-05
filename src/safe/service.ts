@@ -7,6 +7,7 @@ export class SafeService extends Effect.Tag("SafeService")<
   {
     getNonce: (safe: Address) => Effect.Effect<bigint, SafeError>
     getOwners: (safe: Address) => Effect.Effect<Array<Address>, SafeError>
+    getThreshold: (safe: Address) => Effect.Effect<bigint, SafeError>
     getVersion: (safe: Address) => Effect.Effect<string, SafeError>
     isModuleEnabled: (args: { safe: Address; module: Address }) => Effect.Effect<boolean, SafeError>
     isOwner: (args: { safe: Address; owner: Address }) => Effect.Effect<boolean, SafeError>
