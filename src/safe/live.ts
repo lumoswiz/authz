@@ -115,7 +115,7 @@ export const LiveSafeServiceLayer = Layer.effect(
           const deployed = yield* isContractDeployedFx({ client: publicClient, address: safe })
 
           if (deployed) {
-            const hash = yield* Effect.tryPromise({
+            return yield* Effect.tryPromise({
               try: () =>
                 publicClient.readContract({
                   address: safe,
@@ -136,8 +136,6 @@ export const LiveSafeServiceLayer = Layer.effect(
                 }) as Promise<Hex>,
               catch: (error) => new GetSafeTxHashError({ safe, cause: error })
             })
-
-            return hash
           } else {
             const typedData = generateSafeTypedData({
               safeAddress: safe,
