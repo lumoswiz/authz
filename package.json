@@ -26,7 +26,8 @@
     "coverage": "vitest --coverage"
   },
   "dependencies": {
-    "effect": "latest"
+    "effect": "latest",
+    "viem": "^2.33.2"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.8",
