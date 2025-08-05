@@ -6,5 +6,6 @@ export class SafeService extends Effect.Tag("SafeService")<
   SafeService,
   {
     getNonce: (safe: Address) => Effect.Effect<bigint, SafeError>
+    getOwners: (safe: Address) => Effect.Effect<Array<Address>, SafeError>
   }
 >() {}
