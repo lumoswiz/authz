@@ -12,3 +12,13 @@ export interface MetaTransactionData {
   readonly value: Hex
   readonly data: Hex
 }
+
+export interface SafeTransactionData extends MetaTransactionData {
+  readonly operation: OperationType
+  readonly safeTxGas: bigint
+  readonly baseGas: bigint
+  readonly gasPrice: bigint
+  readonly gasToken: Address
+  readonly refundReceiver: Address
+  readonly nonce: bigint
+}

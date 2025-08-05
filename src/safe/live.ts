@@ -2,6 +2,7 @@ import { Effect, Layer } from "effect"
 import { ViemClient } from "src/client/service.js"
 import { type Address, encodeFunctionData } from "viem"
 import { SAFE_PROXY_ABI } from "./abi.js"
+
 import {
   GetNonceError,
   GetOwnersError,
@@ -28,7 +29,30 @@ export const LiveSafeServiceLayer = Layer.effect(
             args: [module]
           })
         })),
-      getNonce: (safe: Address) =>
+
+      buildExecTransaction: ({ safe, signatures, tx }) =>
+        Effect.sync(() => ({
+          to: safe,
+          value: "0x00",
+          data: encodeFunctionData({
+            abi: SAFE_PROXY_ABI,
+            functionName: "execTransaction",
+            args: [
+              tx.to,
+              BigInt(tx.value),
+              tx.data,
+              tx.operation,
+              tx.safeTxGas,
+              tx.baseGas,
+              tx.gasPrice,
+              tx.gasToken,
+              tx.refundReceiver,
+              signatures
+            ]
+          })
+        })),
+
+      getNonce: (safe) =>
         Effect.tryPromise({
           try: () =>
             publicClient.readContract({
@@ -39,7 +63,7 @@ export const LiveSafeServiceLayer = Layer.effect(
           catch: (error) => new GetNonceError({ safe, cause: error })
         }),
 
-      getOwners: (safe: Address) =>
+      getOwners: (safe) =>
         Effect.tryPromise({
           try: () =>
             publicClient.readContract({
@@ -49,7 +73,8 @@ export const LiveSafeServiceLayer = Layer.effect(
             }) as Promise<Array<Address>>,
           catch: (error) => new GetOwnersError({ safe, cause: error })
         }),
-      getThreshold: (safe: Address) =>
+
+      getThreshold: (safe) =>
         Effect.tryPromise({
           try: () =>
             publicClient.readContract({
@@ -59,7 +84,8 @@ export const LiveSafeServiceLayer = Layer.effect(
             }) as Promise<bigint>,
           catch: (error) => new GetThresholdError({ safe, cause: error })
         }),
-      getVersion: (safe: Address) =>
+
+      getVersion: (safe) =>
         Effect.tryPromise({
           try: () =>
             publicClient.readContract({
@@ -69,6 +95,7 @@ export const LiveSafeServiceLayer = Layer.effect(
             }) as Promise<string>,
           catch: (error) => new GetVersionError({ safe, cause: error })
         }),
+
       isModuleEnabled: ({ module, safe }) =>
         Effect.tryPromise({
           try: () =>
@@ -80,6 +107,7 @@ export const LiveSafeServiceLayer = Layer.effect(
             }) as Promise<boolean>,
           catch: (error) => new IsModuleEnabledError({ safe, module, cause: error })
         }),
+
       isOwner: ({ owner, safe }) =>
         Effect.tryPromise({
           try: () =>
