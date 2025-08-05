@@ -1,4 +1,4 @@
-import type { Address, Hex } from "viem"
+import type { Address, Hex, TypedDataDomain, TypedDataParameter } from "viem"
 
 export const OperationType = {
   Call: 0,
@@ -21,4 +21,25 @@ export interface SafeTransactionData extends MetaTransactionData {
   readonly gasToken: Address
   readonly refundReceiver: Address
   readonly nonce: bigint
+}
+
+export type TypedMessageTypes = Record<string, Array<TypedDataParameter>>
+
+export interface EIP712TypedData {
+  domain: TypedDataDomain
+  types: TypedMessageTypes
+  message: Record<string, unknown>
+  primaryType: string
+}
+
+export interface SafeEIP712Args {
+  safeAddress: Address
+  safeVersion: string
+  chainId: number
+  data: SafeTransactionData | EIP712TypedData | Hex
+}
+
+export interface EIP712TxTypes {
+  EIP712Domain: Array<TypedDataParameter>
+  SafeTx: Array<TypedDataParameter>
 }

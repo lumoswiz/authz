@@ -4,6 +4,7 @@ import type { Address } from "viem"
 export type SafeError =
   | GetNonceError
   | GetOwnersError
+  | GetSafeTxHashError
   | GetThresholdError
   | GetVersionError
   | IsModuleEnabledError
@@ -15,6 +16,11 @@ export class GetNonceError extends Data.TaggedError("GetNonceError")<{
 }> {}
 
 export class GetOwnersError extends Data.TaggedError("GetOwnersError")<{
+  safe: Address
+  cause: unknown
+}> {}
+
+export class GetSafeTxHashError extends Data.TaggedError("GetSafeTxHashError")<{
   safe: Address
   cause: unknown
 }> {}

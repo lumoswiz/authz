@@ -24,6 +24,12 @@ export class SafeService extends Effect.Tag("SafeService")<
     }) => Effect.Effect<SafeTransactionData, SafeError>
     getNonce: (safe: Address) => Effect.Effect<bigint, SafeError>
     getOwners: (safe: Address) => Effect.Effect<Array<Address>, SafeError>
+    getSafeTransactionHash: (args: {
+      safe: Address
+      tx: SafeTransactionData
+      version: string
+      chainId: number
+    }) => Effect.Effect<Hex, SafeError>
     getThreshold: (safe: Address) => Effect.Effect<bigint, SafeError>
     getVersion: (safe: Address) => Effect.Effect<string, SafeError>
     isModuleEnabled: (args: { safe: Address; module: Address }) => Effect.Effect<boolean, SafeError>

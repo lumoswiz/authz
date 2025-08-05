@@ -1,11 +1,14 @@
 import { Effect, Layer } from "effect"
 import { ViemClient } from "src/client/service.js"
-import { type Address, encodeFunctionData } from "viem"
+import { isContractDeployedFx } from "src/shared/utils.js"
+import { type Address, encodeFunctionData, hashTypedData, type Hex } from "viem"
 import { SAFE_PROXY_ABI } from "./abi.js"
 import { GAS_DEFAULTS, ZERO_ADDRESS } from "./constants.js"
+import { generateSafeTypedData } from "./eip712.js"
 import {
   GetNonceError,
   GetOwnersError,
+  GetSafeTxHashError,
   GetThresholdError,
   GetVersionError,
   IsModuleEnabledError,
@@ -105,6 +108,46 @@ export const LiveSafeServiceLayer = Layer.effect(
               functionName: "getOwners"
             }) as Promise<Array<Address>>,
           catch: (error) => new GetOwnersError({ safe, cause: error })
+        }),
+
+      getSafeTransactionHash: ({ chainId, safe, tx, version }) =>
+        Effect.gen(function*() {
+          const deployed = yield* isContractDeployedFx({ client: publicClient, address: safe })
+
+          if (deployed) {
+            const hash = yield* Effect.tryPromise({
+              try: () =>
+                publicClient.readContract({
+                  address: safe,
+                  abi: SAFE_PROXY_ABI,
+                  functionName: "getTransactionHash",
+                  args: [
+                    tx.to,
+                    BigInt(tx.value),
+                    tx.data,
+                    tx.operation,
+                    tx.safeTxGas,
+                    tx.baseGas,
+                    tx.gasPrice,
+                    tx.gasToken,
+                    tx.refundReceiver,
+                    tx.nonce
+                  ]
+                }) as Promise<Hex>,
+              catch: (error) => new GetSafeTxHashError({ safe, cause: error })
+            })
+
+            return hash
+          } else {
+            const typedData = generateSafeTypedData({
+              safeAddress: safe,
+              safeVersion: version,
+              chainId,
+              data: tx
+            })
+
+            return hashTypedData(typedData)
+          }
         }),
 
       getThreshold: (safe) =>
