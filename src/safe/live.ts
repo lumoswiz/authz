@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect"
 import { ViemClient } from "src/client/service.js"
-import type { Address } from "viem"
+import { type Address, encodeFunctionData } from "viem"
 import { SAFE_PROXY_ABI } from "./abi.js"
 import {
   GetNonceError,
@@ -18,6 +18,16 @@ export const LiveSafeServiceLayer = Layer.effect(
     const { publicClient } = yield* ViemClient
 
     return {
+      buildEnableModuleTx: ({ module, safe }) =>
+        Effect.sync(() => ({
+          to: safe,
+          value: "0x0",
+          data: encodeFunctionData({
+            abi: SAFE_PROXY_ABI,
+            functionName: "enableModule",
+            args: [module]
+          })
+        })),
       getNonce: (safe: Address) =>
         Effect.tryPromise({
           try: () =>
