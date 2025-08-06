@@ -22,7 +22,17 @@ export class SafeService extends Effect.Tag("SafeService")<
       operation?: OperationType
       useOnChainNonce?: boolean
     }) => Effect.Effect<SafeTransactionData, SafeError>
-    getNonce: (safe: Address) => Effect.Effect<bigint, SafeError>
+    buildSignSafeTx: (args: {
+      safe: Address
+      to: Address
+      data: Hex
+      operation?: OperationType
+      useOnChainNonce?: boolean
+    }) => Effect.Effect<{
+      txData: SafeTransactionData
+      safeTxHash: Hex
+    }, SafeError>
+    getNonce: (safe: Address, useOnChainNonce: boolean) => Effect.Effect<bigint, SafeError>
     getOwners: (safe: Address) => Effect.Effect<Array<Address>, SafeError>
     getSafeTransactionHash: (args: {
       safe: Address
