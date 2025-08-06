@@ -1,8 +1,9 @@
 import type { Effect } from "effect"
 import { Context } from "effect"
 import type { Address, Hex } from "viem"
+import type { OperationType, TransactionData } from "../shared/types.js"
 import type { SafeError } from "./errors.js"
-import type { MetaTransactionData, OperationType, SafeTransactionData } from "./types.js"
+import type { SafeTransactionData } from "./types.js"
 
 export class SafeService extends Context.Tag("SafeService")<
   SafeService,
@@ -10,16 +11,16 @@ export class SafeService extends Context.Tag("SafeService")<
     buildEnableModuleTx: (args: {
       safe: Address
       module: Address
-    }) => Effect.Effect<MetaTransactionData, never>
+    }) => Effect.Effect<TransactionData, never>
     buildExecTransaction: (args: {
       safe: Address
       tx: SafeTransactionData
       signatures: Hex
-    }) => Effect.Effect<MetaTransactionData, never>
+    }) => Effect.Effect<TransactionData, never>
     buildSafeDeploymentTx: (args: {
       owner: Address
       saltNonce: bigint
-    }) => Effect.Effect<MetaTransactionData, SafeError>
+    }) => Effect.Effect<TransactionData, SafeError>
     buildSafeTransactionData: (args: {
       safe: Address
       to: Address
