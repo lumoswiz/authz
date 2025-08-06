@@ -16,6 +16,10 @@ export class SafeService extends Context.Tag("SafeService")<
       tx: SafeTransactionData
       signatures: Hex
     }) => Effect.Effect<MetaTransactionData, never>
+    buildSafeDeploymentTx: (args: {
+      owner: Address
+      saltNonce: bigint
+    }) => Effect.Effect<MetaTransactionData, SafeError>
     buildSafeTransactionData: (args: {
       safe: Address
       to: Address
@@ -33,6 +37,10 @@ export class SafeService extends Context.Tag("SafeService")<
       txData: SafeTransactionData
       safeTxHash: Hex
     }, SafeError>
+    calculateSafeAddress: (args: {
+      owners: Array<Address>
+      saltNonce: bigint
+    }) => Effect.Effect<Address, SafeError>
     getNonce: (safe: Address, useOnChainNonce: boolean) => Effect.Effect<bigint, SafeError>
     getOwners: (safe: Address) => Effect.Effect<Array<Address>, SafeError>
     getSafeTransactionHash: (args: {

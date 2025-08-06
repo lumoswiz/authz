@@ -1,13 +1,24 @@
 import { Effect, Layer } from "effect"
-import { isContractDeployedFx } from "src/shared/utils.js"
-import { type Address, encodeFunctionData, hashTypedData, type Hex } from "viem"
-import { ViemClient } from "../client/service.js"
-import { SAFE_PROXY_ABI } from "./abi.js"
-import { GAS_DEFAULTS, ZERO_ADDRESS } from "./constants.js"
-import { generateSafeTypedData } from "./eip712.js"
 import {
+  type Address,
+  encodeFunctionData,
+  encodePacked,
+  getContractAddress,
+  hashTypedData,
+  type Hex,
+  keccak256
+} from "viem"
+import { ViemClient } from "../client/service.js"
+import { isContractDeployedFx } from "../shared/utils.js"
+import { SAFE_PROXY_ABI, SAFE_PROXY_FACTORY_ABI, SAFE_SINGLETON_ABI } from "./abi.js"
+import { GAS_DEFAULTS, SAFE_PROXY_FACTORY, SAFE_SINGLETON, ZERO_ADDRESS } from "./constants.js"
+import { generateSafeTypedData } from "./eip712.js"
+import type { SafeError } from "./errors.js"
+import {
+  BuildSafeDeploymentTxError,
   GetNonceError,
   GetOwnersError,
+  GetSafeDeploymentAddressError,
   GetSafeTxHashError,
   GetThresholdError,
   GetVersionError,
@@ -39,6 +50,45 @@ export const SafeServiceLive = Layer.effect(
           args: [module]
         })
       }))
+
+    const buildSafeDeploymentTx = ({
+      owner,
+      saltNonce
+    }: {
+      owner: Address
+      saltNonce: bigint
+    }): Effect.Effect<MetaTransactionData, SafeError> =>
+      Effect.try({
+        try: () => {
+          const setupData = encodeFunctionData({
+            abi: SAFE_SINGLETON_ABI,
+            functionName: "setup",
+            args: [
+              [owner],
+              1n,
+              ZERO_ADDRESS,
+              "0x",
+              ZERO_ADDRESS,
+              ZERO_ADDRESS,
+              0n,
+              ZERO_ADDRESS
+            ]
+          })
+
+          const data = encodeFunctionData({
+            abi: SAFE_PROXY_FACTORY_ABI,
+            functionName: "createProxyWithNonce",
+            args: [SAFE_SINGLETON, setupData, saltNonce]
+          })
+
+          return {
+            to: SAFE_PROXY_FACTORY,
+            value: "0x0",
+            data
+          }
+        },
+        catch: (error) => new BuildSafeDeploymentTxError({ owner, cause: error })
+      })
 
     const buildExecTransaction = ({
       safe,
@@ -138,6 +188,52 @@ export const SafeServiceLive = Layer.effect(
         })
 
         return { txData, safeTxHash }
+      })
+
+    const calculateSafeAddress = ({
+      owners,
+      saltNonce
+    }: {
+      owners: Array<Address>
+      saltNonce: bigint
+    }): Effect.Effect<Address, SafeError> =>
+      Effect.tryPromise({
+        try: async () => {
+          const proxyCreationCode = await publicClient.readContract({
+            address: SAFE_PROXY_FACTORY,
+            abi: SAFE_PROXY_FACTORY_ABI,
+            functionName: "proxyCreationCode"
+          }) as Hex
+
+          const setupData = encodeFunctionData({
+            abi: SAFE_SINGLETON_ABI,
+            functionName: "setup",
+            args: [
+              owners,
+              1n,
+              ZERO_ADDRESS,
+              "0x",
+              ZERO_ADDRESS,
+              ZERO_ADDRESS,
+              0n,
+              ZERO_ADDRESS
+            ]
+          })
+
+          const salt = keccak256(
+            encodePacked(["bytes32", "uint256"], [keccak256(setupData), saltNonce])
+          )
+
+          const initCode = encodePacked(["bytes", "uint256"], [proxyCreationCode, BigInt(SAFE_SINGLETON)])
+
+          return getContractAddress({
+            from: SAFE_PROXY_FACTORY,
+            opcode: "CREATE2",
+            bytecode: initCode,
+            salt
+          })
+        },
+        catch: (error) => new GetSafeDeploymentAddressError({ cause: error })
       })
 
     const getNonce = (safe: Address, useOnChainNonce: boolean): Effect.Effect<bigint, GetNonceError> =>
@@ -273,8 +369,10 @@ export const SafeServiceLive = Layer.effect(
     return {
       buildEnableModuleTx,
       buildExecTransaction,
+      buildSafeDeploymentTx,
       buildSafeTransactionData,
       buildSignSafeTx,
+      calculateSafeAddress,
       getNonce,
       getOwners,
       getThreshold,

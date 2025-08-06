@@ -4,6 +4,8 @@ import type { Address } from "viem"
 export type SafeError =
   | GetNonceError
   | GetOwnersError
+  | GetSafeDeploymentAddressError
+  | BuildSafeDeploymentTxError
   | GetSafeTxHashError
   | GetThresholdError
   | GetVersionError
@@ -17,6 +19,15 @@ export class GetNonceError extends Data.TaggedError("GetNonceError")<{
 
 export class GetOwnersError extends Data.TaggedError("GetOwnersError")<{
   safe: Address
+  cause: unknown
+}> {}
+
+export class GetSafeDeploymentAddressError extends Data.TaggedError("GetSafeDeploymentAddressError")<{
+  cause: unknown
+}> {}
+
+export class BuildSafeDeploymentTxError extends Data.TaggedError("BuildSafeDeploymentTxError")<{
+  owner: Address
   cause: unknown
 }> {}
 
