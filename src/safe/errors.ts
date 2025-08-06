@@ -5,6 +5,7 @@ export type SafeError =
   | GetNonceError
   | GetOwnersError
   | GetSafeDeploymentAddressError
+  | BuildSafeDeploymentTxError
   | GetSafeTxHashError
   | GetThresholdError
   | GetVersionError
@@ -22,6 +23,11 @@ export class GetOwnersError extends Data.TaggedError("GetOwnersError")<{
 }> {}
 
 export class GetSafeDeploymentAddressError extends Data.TaggedError("GetSafeDeploymentAddressError")<{
+  cause: unknown
+}> {}
+
+export class BuildSafeDeploymentTxError extends Data.TaggedError("BuildSafeDeploymentTxError")<{
+  owner: Address
   cause: unknown
 }> {}
 

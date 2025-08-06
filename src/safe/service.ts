@@ -16,6 +16,10 @@ export class SafeService extends Context.Tag("SafeService")<
       tx: SafeTransactionData
       signatures: Hex
     }) => Effect.Effect<MetaTransactionData, never>
+    buildSafeDeploymentTx: (args: {
+      owner: Address
+      saltNonce: bigint
+    }) => Effect.Effect<MetaTransactionData, SafeError>
     buildSafeTransactionData: (args: {
       safe: Address
       to: Address

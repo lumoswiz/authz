@@ -15,6 +15,7 @@ import { GAS_DEFAULTS, SAFE_PROXY_FACTORY, SAFE_SINGLETON, ZERO_ADDRESS } from "
 import { generateSafeTypedData } from "./eip712.js"
 import type { SafeError } from "./errors.js"
 import {
+  BuildSafeDeploymentTxError,
   GetNonceError,
   GetOwnersError,
   GetSafeDeploymentAddressError,
@@ -49,6 +50,45 @@ export const SafeServiceLive = Layer.effect(
           args: [module]
         })
       }))
+
+    const buildSafeDeploymentTx = ({
+      owner,
+      saltNonce
+    }: {
+      owner: Address
+      saltNonce: bigint
+    }): Effect.Effect<MetaTransactionData, SafeError> =>
+      Effect.try({
+        try: () => {
+          const setupData = encodeFunctionData({
+            abi: SAFE_SINGLETON_ABI,
+            functionName: "setup",
+            args: [
+              [owner],
+              1n,
+              ZERO_ADDRESS,
+              "0x",
+              ZERO_ADDRESS,
+              ZERO_ADDRESS,
+              0n,
+              ZERO_ADDRESS
+            ]
+          })
+
+          const data = encodeFunctionData({
+            abi: SAFE_PROXY_FACTORY_ABI,
+            functionName: "createProxyWithNonce",
+            args: [SAFE_SINGLETON, setupData, saltNonce]
+          })
+
+          return {
+            to: SAFE_PROXY_FACTORY,
+            value: "0x0",
+            data
+          }
+        },
+        catch: (error) => new BuildSafeDeploymentTxError({ owner, cause: error })
+      })
 
     const buildExecTransaction = ({
       safe,
@@ -329,6 +369,7 @@ export const SafeServiceLive = Layer.effect(
     return {
       buildEnableModuleTx,
       buildExecTransaction,
+      buildSafeDeploymentTx,
       buildSafeTransactionData,
       buildSignSafeTx,
       calculateSafeAddress,
