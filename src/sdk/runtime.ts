@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect"
-import { ViemClientLive } from "src/client/live.js"
-import { SafeServiceLive } from "src/safe/live.js"
+import { ViemClientLive } from "../client/live.js"
+import { SafeServiceLive } from "../safe/live.js"
 import type { SafeService } from "../safe/service.js"
 
 const Live = SafeServiceLive.pipe(

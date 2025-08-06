@@ -1,5 +1,4 @@
 import { Effect, Layer } from "effect"
-import { isContractDeployedFx } from "src/shared/utils.js"
 import {
   type Address,
   encodeFunctionData,
@@ -10,6 +9,7 @@ import {
   keccak256
 } from "viem"
 import { ViemClient } from "../client/service.js"
+import { isContractDeployedFx } from "../shared/utils.js"
 import { SAFE_PROXY_ABI, SAFE_PROXY_FACTORY_ABI, SAFE_SINGLETON_ABI } from "./abi.js"
 import { GAS_DEFAULTS, SAFE_PROXY_FACTORY, SAFE_SINGLETON, ZERO_ADDRESS } from "./constants.js"
 import { generateSafeTypedData } from "./eip712.js"
