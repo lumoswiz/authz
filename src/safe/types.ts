@@ -1,17 +1,5 @@
 import type { Address, Hex, TypedDataDomain, TypedDataParameter } from "viem"
-
-export const OperationType = {
-  Call: 0,
-  DelegateCall: 1
-} as const
-
-export type OperationType = typeof OperationType[keyof typeof OperationType]
-
-export interface MetaTransactionData {
-  readonly to: Address
-  readonly value: Hex
-  readonly data: Hex
-}
+import type { MetaTransactionData, OperationType } from "../shared/types.js"
 
 export interface SafeTransactionData extends MetaTransactionData {
   readonly operation: OperationType

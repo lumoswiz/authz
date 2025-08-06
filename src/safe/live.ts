@@ -9,6 +9,8 @@ import {
   keccak256
 } from "viem"
 import { ViemClient } from "../client/service.js"
+import type { TransactionData } from "../shared//types.js"
+import { OperationType } from "../shared//types.js"
 import { isContractDeployedFx } from "../shared/utils.js"
 import { SAFE_PROXY_ABI, SAFE_PROXY_FACTORY_ABI, SAFE_SINGLETON_ABI } from "./abi.js"
 import { GAS_DEFAULTS, SAFE_PROXY_FACTORY, SAFE_SINGLETON, ZERO_ADDRESS } from "./constants.js"
@@ -26,8 +28,7 @@ import {
   IsOwnerError
 } from "./errors.js"
 import { SafeService } from "./service.js"
-import type { MetaTransactionData, SafeTransactionData } from "./types.js"
-import { OperationType } from "./types.js"
+import type { SafeTransactionData } from "./types.js"
 
 export const SafeServiceLive = Layer.effect(
   SafeService,
@@ -41,7 +42,7 @@ export const SafeServiceLive = Layer.effect(
       safe: Address
       module: Address
     }) =>
-      Effect.sync((): MetaTransactionData => ({
+      Effect.sync((): TransactionData => ({
         to: safe,
         value: "0x0" as Hex,
         data: encodeFunctionData({
@@ -57,7 +58,7 @@ export const SafeServiceLive = Layer.effect(
     }: {
       owner: Address
       saltNonce: bigint
-    }): Effect.Effect<MetaTransactionData, SafeError> =>
+    }): Effect.Effect<TransactionData, SafeError> =>
       Effect.try({
         try: () => {
           const setupData = encodeFunctionData({
@@ -99,7 +100,7 @@ export const SafeServiceLive = Layer.effect(
       tx: SafeTransactionData
       signatures: Hex
     }) =>
-      Effect.sync((): MetaTransactionData => ({
+      Effect.sync((): TransactionData => ({
         to: safe,
         value: "0x0",
         data: encodeFunctionData({
