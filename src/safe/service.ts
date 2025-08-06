@@ -1,9 +1,10 @@
-import { Effect } from "effect"
+import type { Effect } from "effect"
+import { Context } from "effect"
 import type { Address, Hex } from "viem"
 import type { SafeError } from "./errors.js"
 import type { MetaTransactionData, OperationType, SafeTransactionData } from "./types.js"
 
-export class SafeService extends Effect.Tag("SafeService")<
+export class SafeService extends Context.Tag("SafeService")<
   SafeService,
   {
     buildEnableModuleTx: (args: {

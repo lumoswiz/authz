@@ -1,8 +1,7 @@
 import { Effect, Layer } from "effect"
-import { ViemClient } from "src/client/service.js"
 import { isContractDeployedFx } from "src/shared/utils.js"
 import { type Address, encodeFunctionData, hashTypedData, type Hex } from "viem"
-
+import { ViemClient } from "../client/service.js"
 import { SAFE_PROXY_ABI } from "./abi.js"
 import { GAS_DEFAULTS, ZERO_ADDRESS } from "./constants.js"
 import { generateSafeTypedData } from "./eip712.js"
@@ -19,7 +18,7 @@ import { SafeService } from "./service.js"
 import type { MetaTransactionData, SafeTransactionData } from "./types.js"
 import { OperationType } from "./types.js"
 
-export const LiveSafeServiceLayer = Layer.effect(
+export const SafeServiceLive = Layer.effect(
   SafeService,
   Effect.gen(function*() {
     const { publicClient } = yield* ViemClient
