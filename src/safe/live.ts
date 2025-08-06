@@ -1,13 +1,23 @@
 import { Effect, Layer } from "effect"
 import { isContractDeployedFx } from "src/shared/utils.js"
-import { type Address, encodeFunctionData, hashTypedData, type Hex } from "viem"
+import {
+  type Address,
+  encodeFunctionData,
+  encodePacked,
+  getContractAddress,
+  hashTypedData,
+  type Hex,
+  keccak256
+} from "viem"
 import { ViemClient } from "../client/service.js"
-import { SAFE_PROXY_ABI } from "./abi.js"
-import { GAS_DEFAULTS, ZERO_ADDRESS } from "./constants.js"
+import { SAFE_PROXY_ABI, SAFE_PROXY_FACTORY_ABI, SAFE_SINGLETON_ABI } from "./abi.js"
+import { GAS_DEFAULTS, SAFE_PROXY_FACTORY, SAFE_SINGLETON, ZERO_ADDRESS } from "./constants.js"
 import { generateSafeTypedData } from "./eip712.js"
+import type { SafeError } from "./errors.js"
 import {
   GetNonceError,
   GetOwnersError,
+  GetSafeDeploymentAddressError,
   GetSafeTxHashError,
   GetThresholdError,
   GetVersionError,
@@ -138,6 +148,52 @@ export const SafeServiceLive = Layer.effect(
         })
 
         return { txData, safeTxHash }
+      })
+
+    const calculateSafeAddress = ({
+      owners,
+      saltNonce
+    }: {
+      owners: Array<Address>
+      saltNonce: bigint
+    }): Effect.Effect<Address, SafeError> =>
+      Effect.tryPromise({
+        try: async () => {
+          const proxyCreationCode = await publicClient.readContract({
+            address: SAFE_PROXY_FACTORY,
+            abi: SAFE_PROXY_FACTORY_ABI,
+            functionName: "proxyCreationCode"
+          }) as Hex
+
+          const setupData = encodeFunctionData({
+            abi: SAFE_SINGLETON_ABI,
+            functionName: "setup",
+            args: [
+              owners,
+              1n,
+              ZERO_ADDRESS,
+              "0x",
+              ZERO_ADDRESS,
+              ZERO_ADDRESS,
+              0n,
+              ZERO_ADDRESS
+            ]
+          })
+
+          const salt = keccak256(
+            encodePacked(["bytes32", "uint256"], [keccak256(setupData), saltNonce])
+          )
+
+          const initCode = encodePacked(["bytes", "uint256"], [proxyCreationCode, BigInt(SAFE_SINGLETON)])
+
+          return getContractAddress({
+            from: SAFE_PROXY_FACTORY,
+            opcode: "CREATE2",
+            bytecode: initCode,
+            salt
+          })
+        },
+        catch: (error) => new GetSafeDeploymentAddressError({ cause: error })
       })
 
     const getNonce = (safe: Address, useOnChainNonce: boolean): Effect.Effect<bigint, GetNonceError> =>
@@ -275,6 +331,7 @@ export const SafeServiceLive = Layer.effect(
       buildExecTransaction,
       buildSafeTransactionData,
       buildSignSafeTx,
+      calculateSafeAddress,
       getNonce,
       getOwners,
       getThreshold,
