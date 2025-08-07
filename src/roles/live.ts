@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect"
 import { isContractDeployedFx } from "src/shared/utils.js"
-import type { Address } from "viem"
+import type { Address, Hex } from "viem"
 import { encodeFunctionData, encodePacked, getContractAddress, keccak256 } from "viem"
 import { ViemClient } from "../client/service.js"
 import type { TransactionData } from "../shared/types.js"
@@ -11,7 +11,12 @@ import {
   PROXY_BYTECODE_SUFFIX,
   ROLES_V2_MODULE_MASTERCOPY
 } from "./constants.js"
-import { BuildDeployModuleTxError, CalculateProxyAddressError, IsModuleDeployedError } from "./errors.js"
+import {
+  BuildAssignRolesTxError,
+  BuildDeployModuleTxError,
+  CalculateProxyAddressError,
+  IsModuleDeployedError
+} from "./errors.js"
 import { RoleService } from "./service.js"
 import { getRolesModuleInitParams } from "./utils.js"
 
@@ -19,6 +24,30 @@ export const RoleServiceLive = Layer.effect(
   RoleService,
   Effect.gen(function*() {
     const { publicClient } = yield* ViemClient
+
+    const buildAssignRolesTx = ({
+      member,
+      memberOf,
+      module,
+      roleKeys
+    }: {
+      module: Address
+      member: Address
+      roleKeys: Array<Hex>
+      memberOf: Array<boolean>
+    }): Effect.Effect<TransactionData, BuildAssignRolesTxError> =>
+      Effect.try({
+        try: () => ({
+          to: module,
+          data: encodeFunctionData({
+            abi: ROLES_V2_MODULE_ABI,
+            functionName: "assignRoles",
+            args: [member, roleKeys, memberOf]
+          }),
+          value: "0x0"
+        }),
+        catch: (cause) => new BuildAssignRolesTxError({ module, cause })
+      })
 
     const buildDeployModuleTx = ({
       safe,
@@ -112,6 +141,7 @@ export const RoleServiceLive = Layer.effect(
       )
 
     return {
+      buildAssignRolesTx,
       buildDeployModuleTx,
       calculateModuleProxyAddress,
       isModuleDeployed
