@@ -1,5 +1,3 @@
-#!/usr/bin/env tsx
-
 import { type Address } from "viem"
 import { getOwners } from "../src/sdk/safe.js"
 
