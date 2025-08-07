@@ -1,9 +1,9 @@
 import { Effect, Layer } from "effect"
-import { isContractDeployedFx } from "src/shared/utils.js"
 import type { Address, Hex } from "viem"
 import { encodeFunctionData, encodePacked, getContractAddress, keccak256 } from "viem"
 import { ViemClient } from "../client/service.js"
 import type { TransactionData } from "../shared/types.js"
+import { isContractDeployedFx } from "../shared/utils.js"
 import { MODULE_PROXY_FACTORY_ABI, ROLES_V2_MODULE_ABI } from "./abi.js"
 import {
   MODULE_PROXY_FACTORY,
@@ -14,6 +14,7 @@ import {
 import {
   BuildAssignRolesTxError,
   BuildDeployModuleTxError,
+  BuildScopeTargetTxError,
   CalculateProxyAddressError,
   IsModuleDeployedError,
   IsModuleEnabledError
@@ -93,6 +94,28 @@ export const RoleServiceLive = Layer.effect(
         }
       })
 
+    const buildScopeTargetTx = ({
+      module,
+      roleKey,
+      target
+    }: {
+      module: Address
+      roleKey: Hex
+      target: Address
+    }): Effect.Effect<TransactionData, BuildScopeTargetTxError> =>
+      Effect.try({
+        try: () => ({
+          to: module,
+          value: "0x0",
+          data: encodeFunctionData({
+            abi: ROLES_V2_MODULE_ABI,
+            functionName: "scopeTarget",
+            args: [roleKey, target]
+          })
+        }),
+        catch: (cause) => new BuildScopeTargetTxError({ module, roleKey, target, cause })
+      })
+
     const calculateModuleProxyAddress = ({
       safe,
       saltNonce
@@ -162,6 +185,7 @@ export const RoleServiceLive = Layer.effect(
     return {
       buildAssignRolesTx,
       buildDeployModuleTx,
+      buildScopeTargetTx,
       calculateModuleProxyAddress,
       isModuleDeployed,
       isModuleEnabled

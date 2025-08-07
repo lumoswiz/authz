@@ -19,6 +19,12 @@ export class RoleService extends Context.Tag("RoleService")<
       saltNonce: bigint
     }) => Effect.Effect<TransactionData, RoleError>
 
+    buildScopeTargetTx: (args: {
+      module: Address
+      roleKey: Hex
+      target: Address
+    }) => Effect.Effect<TransactionData, RoleError>
+
     calculateModuleProxyAddress: (args: {
       safe: Address
       saltNonce: bigint

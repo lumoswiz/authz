@@ -1,8 +1,9 @@
 import { Data } from "effect"
-import type { Address } from "viem"
+import type { Address, Hex } from "viem"
 
 export type RoleError =
   | BuildAssignRolesTxError
+  | BuildScopeTargetTxError
   | BuildDeployModuleTxError
   | CalculateProxyAddressError
   | IsModuleDeployedError
@@ -16,6 +17,13 @@ export class BuildAssignRolesTxError extends Data.TaggedError("BuildAssignRolesT
 export class BuildDeployModuleTxError extends Data.TaggedError("BuildDeployModuleTxError")<{
   safe: Address
   saltNonce: bigint
+  cause: unknown
+}> {}
+
+export class BuildScopeTargetTxError extends Data.TaggedError("BuildScopeTargetTxError")<{
+  module: Address
+  roleKey: Hex
+  target: Address
   cause: unknown
 }> {}
 
