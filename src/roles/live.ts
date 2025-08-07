@@ -11,7 +11,7 @@ import {
   PROXY_BYTECODE_SUFFIX,
   ROLES_V2_MODULE_MASTERCOPY
 } from "./constants.js"
-import { BuildDeployModuleTxError, CalculateProxyAddressError } from "./errors.js"
+import { BuildDeployModuleTxError, CalculateProxyAddressError, IsModuleDeployedError } from "./errors.js"
 import { RoleService } from "./service.js"
 import { getRolesModuleInitParams } from "./utils.js"
 
@@ -99,9 +99,22 @@ export const RoleServiceLive = Layer.effect(
         catch: (cause) => new CalculateProxyAddressError({ cause })
       })
 
+    const isModuleDeployed = ({
+      safe,
+      saltNonce
+    }: {
+      safe: Address
+      saltNonce: bigint
+    }): Effect.Effect<boolean, IsModuleDeployedError> =>
+      calculateModuleProxyAddress({ safe, saltNonce }).pipe(
+        Effect.mapError((cause) => new IsModuleDeployedError({ safe, saltNonce, cause })),
+        Effect.flatMap((address) => isContractDeployedFx({ client: publicClient, address }))
+      )
+
     return {
       buildDeployModuleTx,
-      calculateModuleProxyAddress
+      calculateModuleProxyAddress,
+      isModuleDeployed
     }
   })
 )

@@ -16,5 +16,10 @@ export class RoleService extends Context.Tag("RoleService")<
       safe: Address
       saltNonce: bigint
     }) => Effect.Effect<Address, RoleError>
+
+    isModuleDeployed: (args: {
+      safe: Address
+      saltNonce: bigint
+    }) => Effect.Effect<boolean, RoleError>
   }
 >() {}
