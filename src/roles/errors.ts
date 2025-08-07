@@ -6,6 +6,7 @@ export type RoleError =
   | BuildDeployModuleTxError
   | CalculateProxyAddressError
   | IsModuleDeployedError
+  | IsModuleEnabledError
 
 export class BuildAssignRolesTxError extends Data.TaggedError("BuildAssignRolesTxError")<{
   module: Address
@@ -25,5 +26,11 @@ export class CalculateProxyAddressError extends Data.TaggedError("CalculateProxy
 export class IsModuleDeployedError extends Data.TaggedError("IsModuleDeployedError")<{
   safe: Address
   saltNonce: bigint
+  cause: unknown
+}> {}
+
+export class IsModuleEnabledError extends Data.TaggedError("IsModuleEnabledError")<{
+  module: Address
+  member: Address
   cause: unknown
 }> {}

@@ -15,7 +15,8 @@ import {
   BuildAssignRolesTxError,
   BuildDeployModuleTxError,
   CalculateProxyAddressError,
-  IsModuleDeployedError
+  IsModuleDeployedError,
+  IsModuleEnabledError
 } from "./errors.js"
 import { RoleService } from "./service.js"
 import { getRolesModuleInitParams } from "./utils.js"
@@ -140,11 +141,30 @@ export const RoleServiceLive = Layer.effect(
         Effect.flatMap((address) => isContractDeployedFx({ client: publicClient, address }))
       )
 
+    const isModuleEnabled = ({
+      member,
+      module
+    }: {
+      module: Address
+      member: Address
+    }): Effect.Effect<boolean, IsModuleEnabledError> =>
+      Effect.tryPromise({
+        try: () =>
+          publicClient.readContract({
+            address: module,
+            abi: ROLES_V2_MODULE_ABI,
+            functionName: "isModuleEnabled",
+            args: [member]
+          }) as Promise<boolean>,
+        catch: (cause) => new IsModuleEnabledError({ module, member, cause })
+      })
+
     return {
       buildAssignRolesTx,
       buildDeployModuleTx,
       calculateModuleProxyAddress,
-      isModuleDeployed
+      isModuleDeployed,
+      isModuleEnabled
     }
   })
 )
