@@ -1,28 +1,67 @@
 import { Effect, Layer } from "effect"
+import { isContractDeployedFx } from "src/shared/utils.js"
 import type { Address } from "viem"
-import {
-  encodeAbiParameters,
-  encodeFunctionData,
-  encodePacked,
-  getContractAddress,
-  keccak256,
-  parseAbiParameters
-} from "viem"
+import { encodeFunctionData, encodePacked, getContractAddress, keccak256 } from "viem"
 import { ViemClient } from "../client/service.js"
-import { ROLES_V2_MODULE_ABI } from "./abi.js"
+import type { TransactionData } from "../shared/types.js"
+import { MODULE_PROXY_FACTORY_ABI, ROLES_V2_MODULE_ABI } from "./abi.js"
 import {
   MODULE_PROXY_FACTORY,
   PROXY_BYTECODE_PREFIX,
   PROXY_BYTECODE_SUFFIX,
   ROLES_V2_MODULE_MASTERCOPY
 } from "./constants.js"
-import { CalculateProxyAddressError } from "./errors.js"
+import { BuildDeployModuleTxError, CalculateProxyAddressError } from "./errors.js"
 import { RoleService } from "./service.js"
+import { getRolesModuleInitParams } from "./utils.js"
 
 export const RoleServiceLive = Layer.effect(
   RoleService,
   Effect.gen(function*() {
     const { publicClient } = yield* ViemClient
+
+    const buildDeployModuleTx = ({
+      safe,
+      saltNonce
+    }: {
+      safe: Address
+      saltNonce: bigint
+    }): Effect.Effect<TransactionData, BuildDeployModuleTxError> =>
+      Effect.gen(function*() {
+        const moduleAddress = yield* calculateModuleProxyAddress({ safe, saltNonce }).pipe(
+          Effect.mapError((cause) => new BuildDeployModuleTxError({ safe, saltNonce, cause }))
+        )
+
+        const isDeployed = yield* isContractDeployedFx({ client: publicClient, address: moduleAddress })
+
+        if (isDeployed) {
+          return yield* Effect.fail(
+            new BuildDeployModuleTxError({
+              safe,
+              saltNonce,
+              cause: new Error("Module already deployed")
+            })
+          )
+        }
+
+        const initParams = getRolesModuleInitParams(safe)
+
+        const setupData = encodeFunctionData({
+          abi: ROLES_V2_MODULE_ABI,
+          functionName: "setUp",
+          args: [initParams]
+        })
+
+        return {
+          to: MODULE_PROXY_FACTORY,
+          data: encodeFunctionData({
+            abi: MODULE_PROXY_FACTORY_ABI,
+            functionName: "deployModule",
+            args: [ROLES_V2_MODULE_MASTERCOPY, setupData, saltNonce]
+          }),
+          value: "0x0"
+        }
+      })
 
     const calculateModuleProxyAddress = ({
       safe,
@@ -33,14 +72,12 @@ export const RoleServiceLive = Layer.effect(
     }): Effect.Effect<Address, CalculateProxyAddressError> =>
       Effect.try({
         try: () => {
+          const initParams = getRolesModuleInitParams(safe)
+
           const setupData = encodeFunctionData({
             abi: ROLES_V2_MODULE_ABI,
             functionName: "setUp",
-            args: [encodeAbiParameters(parseAbiParameters("address,address,address"), [
-              safe,
-              safe,
-              safe
-            ])]
+            args: [initParams]
           })
 
           const salt = keccak256(
@@ -63,6 +100,7 @@ export const RoleServiceLive = Layer.effect(
       })
 
     return {
+      buildDeployModuleTx,
       calculateModuleProxyAddress
     }
   })
