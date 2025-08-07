@@ -3,6 +3,7 @@ import type { Address, Hex } from "viem"
 
 export type RoleError =
   | BuildAssignRolesTxError
+  | BuildScopeFunctionTxError
   | BuildScopeTargetTxError
   | BuildDeployModuleTxError
   | CalculateProxyAddressError
@@ -17,6 +18,14 @@ export class BuildAssignRolesTxError extends Data.TaggedError("BuildAssignRolesT
 export class BuildDeployModuleTxError extends Data.TaggedError("BuildDeployModuleTxError")<{
   safe: Address
   saltNonce: bigint
+  cause: unknown
+}> {}
+
+export class BuildScopeFunctionTxError extends Data.TaggedError("BuildScopeFunctionTxError")<{
+  module: Address
+  roleKey: Hex
+  target: Address
+  selector: Hex
   cause: unknown
 }> {}
 

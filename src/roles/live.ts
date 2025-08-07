@@ -14,12 +14,14 @@ import {
 import {
   BuildAssignRolesTxError,
   BuildDeployModuleTxError,
+  BuildScopeFunctionTxError,
   BuildScopeTargetTxError,
   CalculateProxyAddressError,
   IsModuleDeployedError,
   IsModuleEnabledError
 } from "./errors.js"
 import { RoleService } from "./service.js"
+import type { ConditionFlat, ExecutionOptions } from "./types.js"
 import { getRolesModuleInitParams } from "./utils.js"
 
 export const RoleServiceLive = Layer.effect(
@@ -92,6 +94,34 @@ export const RoleServiceLive = Layer.effect(
           }),
           value: "0x0"
         }
+      })
+
+    const buildScopeFunctionTx = ({
+      conditions,
+      executionOpts,
+      module,
+      roleKey,
+      selector,
+      target
+    }: {
+      module: Address
+      roleKey: Hex
+      target: Address
+      selector: Hex
+      conditions: Array<ConditionFlat>
+      executionOpts: ExecutionOptions
+    }): Effect.Effect<TransactionData, BuildScopeFunctionTxError> =>
+      Effect.try({
+        try: () => ({
+          to: module,
+          value: "0x0",
+          data: encodeFunctionData({
+            abi: ROLES_V2_MODULE_ABI,
+            functionName: "scopeFunction",
+            args: [roleKey, target, selector, conditions, executionOpts]
+          })
+        }),
+        catch: (cause) => new BuildScopeFunctionTxError({ module, roleKey, target, selector, cause })
       })
 
     const buildScopeTargetTx = ({
@@ -185,6 +215,7 @@ export const RoleServiceLive = Layer.effect(
     return {
       buildAssignRolesTx,
       buildDeployModuleTx,
+      buildScopeFunctionTx,
       buildScopeTargetTx,
       calculateModuleProxyAddress,
       isModuleDeployed,
