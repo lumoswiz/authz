@@ -1,6 +1,18 @@
 import { Data } from "effect"
 import type { Address } from "viem"
 
+export type SubgraphError =
+  | GetSubgraphChainPrefixError
+  | FetchSubgraphError
+  | ParseClearanceError
+  | ParseExecutionOptionsError
+  | ParseConditionPayloadError
+
+export class FetchSubgraphError extends Data.TaggedError("FetchSubgraphError")<{
+  id: string
+  cause: unknown
+}> {}
+
 export class GetSubgraphChainPrefixError extends Data.TaggedError("GetSubgraphChainPrefixError")<{
   chainId: number
   module: Address
