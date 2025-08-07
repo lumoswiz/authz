@@ -16,3 +16,10 @@ export interface TransactionData {
 export interface MetaTransactionData extends TransactionData {
   readonly operation: OperationType
 }
+
+export enum ExecutionOptions {
+  None = 0,
+  Send = 1,
+  DelegateCall = 2,
+  Both = 3
+}

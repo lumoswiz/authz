@@ -1,9 +1,9 @@
 import type { Effect } from "effect"
 import { Context } from "effect"
 import type { Address, Hex } from "viem"
-import type { TransactionData } from "../shared/types.js"
+import type { ExecutionOptions, TransactionData } from "../shared/types.js"
 import type { RoleError } from "./errors.js"
-import type { ConditionFlat, ExecutionOptions } from "./types.js"
+import type { ConditionFlat } from "./types.js"
 
 export class RoleService extends Context.Tag("RoleService")<
   RoleService,
