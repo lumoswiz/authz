@@ -4,6 +4,8 @@ import type { Address } from "viem"
 export type SubgraphError =
   | GetSubgraphChainPrefixError
   | FetchSubgraphError
+  | InvalidAddressError
+  | InvalidBytes32Error
   | ParseClearanceError
   | ParseExecutionOptionsError
   | ParseConditionPayloadError
@@ -16,6 +18,16 @@ export class FetchSubgraphError extends Data.TaggedError("FetchSubgraphError")<{
 export class GetSubgraphChainPrefixError extends Data.TaggedError("GetSubgraphChainPrefixError")<{
   chainId: number
   module: Address
+}> {}
+
+export class InvalidAddressError extends Data.TaggedError("InvalidAddressError")<{
+  value: string
+  reason: "not-hex" | "wrong-length"
+}> {}
+
+export class InvalidBytes32Error extends Data.TaggedError("InvalidBytes32Error")<{
+  value: string
+  reason: "not-hex" | "wrong-length"
 }> {}
 
 export class ParseClearanceError extends Data.TaggedError("ParseClearanceError")<{
