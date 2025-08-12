@@ -1,14 +1,17 @@
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import type { Address, Hex } from "viem"
 import { CHAINS } from "../shared/constants.js"
 import { ExecutionOptions } from "../shared/types.js"
 import type { SubgraphMappingError } from "./errors.js"
 import {
   GetSubgraphChainPrefixError,
+  InvalidAddressError,
+  InvalidBytes32Error,
   ParseClearanceError,
   ParseConditionPayloadError,
   ParseExecutionOptionsError
 } from "./errors.js"
+import { AddressLower, Bytes32Lower } from "./schema.js"
 import type { RawSubgraphRole, SubgraphCondition, SubgraphFunction, SubgraphRole, Target } from "./types.js"
 import { Clearance } from "./types.js"
 
@@ -16,20 +19,35 @@ export const getRoleIdForSubgraph = (
   chainId: number,
   moduleAddress: Address,
   roleKey: Hex
-): Effect.Effect<string, GetSubgraphChainPrefixError> =>
-  Effect.try({
-    try: () => {
-      const chain = CHAINS[chainId]
-      if (!chain) {
-        throw new GetSubgraphChainPrefixError({ chainId, module: moduleAddress })
-      }
-      return `${chain.prefix}:${moduleAddress.toLowerCase()}:${roleKey}`
-    },
-    catch: (cause) =>
-      cause instanceof GetSubgraphChainPrefixError
-        ? cause
-        : new GetSubgraphChainPrefixError({ chainId, module: moduleAddress })
-  })
+): Effect.Effect<
+  string,
+  GetSubgraphChainPrefixError | InvalidAddressError | InvalidBytes32Error,
+  never
+> =>
+  Effect.sync(() => CHAINS[chainId]).pipe(
+    Effect.flatMap((chain) =>
+      chain
+        ? Effect.succeed(chain)
+        : Effect.fail(new GetSubgraphChainPrefixError({ chainId, module: moduleAddress }))
+    ),
+    Effect.flatMap((chain) => {
+      const addrE = Effect.try({
+        try: () => Schema.decodeUnknownSync(AddressLower)(moduleAddress),
+        catch: () => new InvalidAddressError({ value: moduleAddress, reason: "wrong-length" })
+      })
+
+      const keyE = Effect.try({
+        try: () => Schema.decodeUnknownSync(Bytes32Lower)(roleKey),
+        catch: () => new InvalidBytes32Error({ value: roleKey, reason: "wrong-length" })
+      })
+
+      return Effect.zipWith(
+        addrE,
+        keyE,
+        (addr, key) => `${chain.prefix}:${addr}:${key}`
+      )
+    })
+  )
 
 export const mapGraphQlRole = (
   raw: RawSubgraphRole
