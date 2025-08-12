@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect"
 import type { Address, Hex } from "viem"
 import { encodeFunctionData, encodePacked, getContractAddress, keccak256 } from "viem"
 import { ViemClient } from "../client/service.js"
-import type { TransactionData } from "../shared/types.js"
+import type { ExecutionOptions, TransactionData } from "../shared/types.js"
 import { isContractDeployedFx } from "../shared/utils.js"
 import { MODULE_PROXY_FACTORY_ABI, ROLES_V2_MODULE_ABI } from "./abi.js"
 import {
@@ -21,7 +21,7 @@ import {
   IsModuleEnabledError
 } from "./errors.js"
 import { RoleService } from "./service.js"
-import type { ConditionFlat, ExecutionOptions } from "./types.js"
+import type { ConditionFlat } from "./types.js"
 import { getRolesModuleInitParams } from "./utils.js"
 
 export const RoleServiceLive = Layer.effect(
