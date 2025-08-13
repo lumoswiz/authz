@@ -9,11 +9,11 @@ import {
   keccak256
 } from "viem"
 import { ViemClient } from "../client/service.js"
-import type { TransactionData } from "../shared//types.js"
-import { OperationType } from "../shared//types.js"
+import { ZERO_ADDRESS } from "../shared/constants.js"
+import { OperationType, type TransactionData } from "../shared/types.js"
 import { isContractDeployedFx } from "../shared/utils.js"
 import { SAFE_PROXY_ABI, SAFE_PROXY_FACTORY_ABI, SAFE_SINGLETON_ABI } from "./abi.js"
-import { GAS_DEFAULTS, SAFE_PROXY_FACTORY, SAFE_SINGLETON, ZERO_ADDRESS } from "./constants.js"
+import { GAS_DEFAULTS, SAFE_PROXY_FACTORY, SAFE_SINGLETON } from "./constants.js"
 import { generateSafeTypedData } from "./eip712.js"
 import type { SafeError } from "./errors.js"
 import {
@@ -44,7 +44,7 @@ export const SafeServiceLive = Layer.effect(
     }) =>
       Effect.sync((): TransactionData => ({
         to: safe,
-        value: "0x0" as Hex,
+        value: "0x0",
         data: encodeFunctionData({
           abi: SAFE_PROXY_ABI,
           functionName: "enableModule",
@@ -59,37 +59,31 @@ export const SafeServiceLive = Layer.effect(
       owner: Address
       saltNonce: bigint
     }): Effect.Effect<TransactionData, SafeError> =>
-      Effect.try({
-        try: () => {
-          const setupData = encodeFunctionData({
-            abi: SAFE_SINGLETON_ABI,
-            functionName: "setup",
-            args: [
-              [owner],
-              1n,
-              ZERO_ADDRESS,
-              "0x",
-              ZERO_ADDRESS,
-              ZERO_ADDRESS,
-              0n,
-              ZERO_ADDRESS
-            ]
-          })
-
-          const data = encodeFunctionData({
-            abi: SAFE_PROXY_FACTORY_ABI,
-            functionName: "createProxyWithNonce",
-            args: [SAFE_SINGLETON, setupData, saltNonce]
-          })
-
-          return {
-            to: SAFE_PROXY_FACTORY,
-            value: "0x0",
-            data
-          }
-        },
-        catch: (error) => new BuildSafeDeploymentTxError({ owner, cause: error })
-      })
+      Effect.try((): TransactionData => {
+        const setupData = encodeFunctionData({
+          abi: SAFE_SINGLETON_ABI,
+          functionName: "setup",
+          args: [
+            [owner],
+            1n,
+            ZERO_ADDRESS,
+            "0x",
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            0n,
+            ZERO_ADDRESS
+          ]
+        })
+        const data = encodeFunctionData({
+          abi: SAFE_PROXY_FACTORY_ABI,
+          functionName: "createProxyWithNonce",
+          args: [SAFE_SINGLETON, setupData, saltNonce]
+        })
+        return { to: SAFE_PROXY_FACTORY, value: "0x0", data }
+      }).pipe(
+        Effect.mapError((error) => new BuildSafeDeploymentTxError({ owner, cause: error })),
+        Effect.mapError((e): SafeError => e)
+      )
 
     const buildExecTransaction = ({
       safe,
@@ -133,11 +127,9 @@ export const SafeServiceLive = Layer.effect(
       data: Hex
       operation?: OperationType
       useOnChainNonce?: boolean
-    }): Effect.Effect<SafeTransactionData, GetNonceError> =>
-      Effect.gen(function*() {
-        const nonce = yield* getNonce(safe, useOnChainNonce)
-
-        return {
+    }): Effect.Effect<SafeTransactionData, SafeError> =>
+      getNonce(safe, useOnChainNonce).pipe(
+        Effect.map((nonce): SafeTransactionData => ({
           to,
           value: "0x0",
           data,
@@ -146,8 +138,8 @@ export const SafeServiceLive = Layer.effect(
           gasToken: ZERO_ADDRESS,
           refundReceiver: ZERO_ADDRESS,
           nonce
-        }
-      })
+        }))
+      )
 
     const buildSignSafeTx = ({
       data,
@@ -161,35 +153,24 @@ export const SafeServiceLive = Layer.effect(
       safe: Address
       to: Address
       useOnChainNonce?: boolean
-    }): Effect.Effect<{
-      txData: SafeTransactionData
-      safeTxHash: Hex
-    }, GetNonceError | GetVersionError | GetSafeTxHashError> =>
-      Effect.gen(function*() {
-        const txData = yield* buildSafeTransactionData({
-          safe,
-          to,
-          data,
-          operation,
-          useOnChainNonce
-        })
-
-        const version = yield* getVersion(safe)
-
-        const chainId = yield* Effect.tryPromise({
-          try: () => publicClient.getChainId(),
-          catch: (error): GetSafeTxHashError => new GetSafeTxHashError({ safe, cause: error })
-        })
-
-        const safeTxHash = yield* getSafeTransactionHash({
-          safe,
-          tx: txData,
-          version,
-          chainId
-        })
-
-        return { txData, safeTxHash }
-      })
+    }): Effect.Effect<{ txData: SafeTransactionData; safeTxHash: Hex }, SafeError> =>
+      buildSafeTransactionData({ safe, to, data, operation, useOnChainNonce }).pipe(
+        Effect.flatMap((txData) =>
+          getVersion(safe).pipe(
+            Effect.flatMap((version) =>
+              Effect.promise(() => publicClient.getChainId()).pipe(
+                Effect.mapError((error) => new GetSafeTxHashError({ safe, cause: error })),
+                Effect.flatMap((chainId) =>
+                  getSafeTransactionHash({ safe, tx: txData, version, chainId }).pipe(
+                    Effect.map((safeTxHash) => ({ txData, safeTxHash }))
+                  )
+                )
+              )
+            )
+          )
+        ),
+        Effect.mapError((e): SafeError => e)
+      )
 
     const calculateSafeAddress = ({
       owners,
@@ -198,90 +179,90 @@ export const SafeServiceLive = Layer.effect(
       owners: Array<Address>
       saltNonce: bigint
     }): Effect.Effect<Address, SafeError> =>
-      Effect.tryPromise({
-        try: async () => {
-          const proxyCreationCode = await publicClient.readContract({
-            address: SAFE_PROXY_FACTORY,
-            abi: SAFE_PROXY_FACTORY_ABI,
-            functionName: "proxyCreationCode"
-          }) as Hex
+      Effect.promise(async (): Promise<Address> => {
+        const proxyCreationCode = await publicClient.readContract({
+          address: SAFE_PROXY_FACTORY,
+          abi: SAFE_PROXY_FACTORY_ABI,
+          functionName: "proxyCreationCode"
+        }) as Hex
+        const setupData = encodeFunctionData({
+          abi: SAFE_SINGLETON_ABI,
+          functionName: "setup",
+          args: [
+            owners,
+            1n,
+            ZERO_ADDRESS,
+            "0x",
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            0n,
+            ZERO_ADDRESS
+          ]
+        })
+        const salt = keccak256(encodePacked(["bytes32", "uint256"], [keccak256(setupData), saltNonce]))
+        const initCode = encodePacked(["bytes", "uint256"], [proxyCreationCode, BigInt(SAFE_SINGLETON)])
+        return getContractAddress({
+          from: SAFE_PROXY_FACTORY,
+          opcode: "CREATE2",
+          bytecode: initCode,
+          salt
+        })
+      }).pipe(
+        Effect.mapError((error) => new GetSafeDeploymentAddressError({ cause: error })),
+        Effect.mapError((e): SafeError => e)
+      )
 
-          const setupData = encodeFunctionData({
-            abi: SAFE_SINGLETON_ABI,
-            functionName: "setup",
-            args: [
-              owners,
-              1n,
-              ZERO_ADDRESS,
-              "0x",
-              ZERO_ADDRESS,
-              ZERO_ADDRESS,
-              0n,
-              ZERO_ADDRESS
-            ]
-          })
-
-          const salt = keccak256(
-            encodePacked(["bytes32", "uint256"], [keccak256(setupData), saltNonce])
-          )
-
-          const initCode = encodePacked(["bytes", "uint256"], [proxyCreationCode, BigInt(SAFE_SINGLETON)])
-
-          return getContractAddress({
-            from: SAFE_PROXY_FACTORY,
-            opcode: "CREATE2",
-            bytecode: initCode,
-            salt
-          })
-        },
-        catch: (error) => new GetSafeDeploymentAddressError({ cause: error })
-      })
-
-    const getNonce = (safe: Address, useOnChainNonce: boolean): Effect.Effect<bigint, GetNonceError> =>
-      useOnChainNonce ?
-        Effect.tryPromise({
-          try: () =>
+    const getNonce = (safe: Address, useOnChainNonce: boolean): Effect.Effect<bigint, SafeError> =>
+      Effect.if(Effect.succeed(useOnChainNonce), {
+        onTrue: () =>
+          Effect.promise(() =>
             publicClient.readContract({
               address: safe,
               abi: SAFE_PROXY_ABI,
               functionName: "nonce"
-            }) as Promise<bigint>,
-          catch: (error) => new GetNonceError({ safe, cause: error })
-        }) :
-        Effect.succeed(0n)
-
-    const getOwners = (safe: Address): Effect.Effect<Array<Address>, GetOwnersError> =>
-      Effect.tryPromise({
-        try: () =>
-          publicClient.readContract({
-            address: safe,
-            abi: SAFE_PROXY_ABI,
-            functionName: "getOwners"
-          }) as Promise<Array<Address>>,
-        catch: (error) => new GetOwnersError({ safe, cause: error })
+            }) as Promise<bigint>
+          ).pipe(
+            Effect.mapError((error) => new GetNonceError({ safe, cause: error })),
+            Effect.mapError((e): SafeError => e)
+          ),
+        onFalse: () => Effect.succeed(0n)
       })
 
-    const getThreshold = (safe: Address): Effect.Effect<bigint, GetThresholdError> =>
-      Effect.tryPromise({
-        try: () =>
-          publicClient.readContract({
-            address: safe,
-            abi: SAFE_PROXY_ABI,
-            functionName: "getThreshold"
-          }) as Promise<bigint>,
-        catch: (error) => new GetThresholdError({ safe, cause: error })
-      })
+    const getOwners = (safe: Address): Effect.Effect<Array<Address>, SafeError> =>
+      Effect.promise(() =>
+        publicClient.readContract({
+          address: safe,
+          abi: SAFE_PROXY_ABI,
+          functionName: "getOwners"
+        }) as Promise<Array<Address>>
+      ).pipe(
+        Effect.mapError((error) => new GetOwnersError({ safe, cause: error })),
+        Effect.mapError((e): SafeError => e)
+      )
 
-    const getVersion = (safe: Address) =>
-      Effect.tryPromise({
-        try: () =>
-          publicClient.readContract({
-            address: safe,
-            abi: SAFE_PROXY_ABI,
-            functionName: "VERSION"
-          }) as Promise<string>,
-        catch: (error) => new GetVersionError({ safe, cause: error })
-      })
+    const getThreshold = (safe: Address): Effect.Effect<bigint, SafeError> =>
+      Effect.promise(() =>
+        publicClient.readContract({
+          address: safe,
+          abi: SAFE_PROXY_ABI,
+          functionName: "getThreshold"
+        }) as Promise<bigint>
+      ).pipe(
+        Effect.mapError((error) => new GetThresholdError({ safe, cause: error })),
+        Effect.mapError((e): SafeError => e)
+      )
+
+    const getVersion = (safe: Address): Effect.Effect<string, SafeError> =>
+      Effect.promise(() =>
+        publicClient.readContract({
+          address: safe,
+          abi: SAFE_PROXY_ABI,
+          functionName: "VERSION"
+        }) as Promise<string>
+      ).pipe(
+        Effect.mapError((error) => new GetVersionError({ safe, cause: error })),
+        Effect.mapError((e): SafeError => e)
+      )
 
     const getSafeTransactionHash = ({
       chainId,
@@ -293,41 +274,39 @@ export const SafeServiceLive = Layer.effect(
       tx: SafeTransactionData
       version: string
       chainId: number
-    }): Effect.Effect<Hex, GetSafeTxHashError> =>
-      Effect.gen(function*() {
-        const deployed = yield* isContractDeployedFx({ client: publicClient, address: safe })
-
-        if (deployed) {
-          return yield* Effect.tryPromise({
-            try: () =>
-              publicClient.readContract({
-                address: safe,
-                abi: SAFE_PROXY_ABI,
-                functionName: "getTransactionHash",
-                args: [
-                  tx.to,
-                  BigInt(tx.value),
-                  tx.data,
-                  tx.operation,
-                  tx.safeTxGas,
-                  tx.baseGas,
-                  tx.gasPrice,
-                  tx.gasToken,
-                  tx.refundReceiver,
-                  tx.nonce
-                ]
-              }) as Promise<Hex>,
-            catch: (error) => new GetSafeTxHashError({ safe, cause: error })
-          })
-        } else {
+    }): Effect.Effect<Hex, SafeError> =>
+      Effect.if(isContractDeployedFx({ client: publicClient, address: safe }), {
+        onTrue: () =>
+          Effect.promise(() =>
+            publicClient.readContract({
+              address: safe,
+              abi: SAFE_PROXY_ABI,
+              functionName: "getTransactionHash",
+              args: [
+                tx.to,
+                BigInt(tx.value),
+                tx.data,
+                tx.operation,
+                tx.safeTxGas,
+                tx.baseGas,
+                tx.gasPrice,
+                tx.gasToken,
+                tx.refundReceiver,
+                tx.nonce
+              ]
+            }) as Promise<Hex>
+          ).pipe(
+            Effect.mapError((error) => new GetSafeTxHashError({ safe, cause: error })),
+            Effect.mapError((e): SafeError => e)
+          ),
+        onFalse: () => {
           const typedData = generateSafeTypedData({
             safeAddress: safe,
             safeVersion: version,
             chainId,
             data: tx
           })
-
-          return hashTypedData(typedData)
+          return Effect.sync((): Hex => hashTypedData(typedData))
         }
       })
 
@@ -337,17 +316,18 @@ export const SafeServiceLive = Layer.effect(
     }: {
       safe: Address
       module: Address
-    }): Effect.Effect<boolean, IsModuleEnabledError> =>
-      Effect.tryPromise({
-        try: () =>
-          publicClient.readContract({
-            address: safe,
-            abi: SAFE_PROXY_ABI,
-            functionName: "isModuleEnabled",
-            args: [module]
-          }) as Promise<boolean>,
-        catch: (error) => new IsModuleEnabledError({ safe, module, cause: error })
-      })
+    }): Effect.Effect<boolean, SafeError> =>
+      Effect.promise(() =>
+        publicClient.readContract({
+          address: safe,
+          abi: SAFE_PROXY_ABI,
+          functionName: "isModuleEnabled",
+          args: [module]
+        }) as Promise<boolean>
+      ).pipe(
+        Effect.mapError((error) => new IsModuleEnabledError({ safe, module, cause: error })),
+        Effect.mapError((e): SafeError => e)
+      )
 
     const isOwner = ({
       owner,
@@ -355,17 +335,18 @@ export const SafeServiceLive = Layer.effect(
     }: {
       owner: Address
       safe: Address
-    }): Effect.Effect<boolean, IsOwnerError> =>
-      Effect.tryPromise({
-        try: () =>
-          publicClient.readContract({
-            address: safe,
-            abi: SAFE_PROXY_ABI,
-            functionName: "isOwner",
-            args: [owner]
-          }) as Promise<boolean>,
-        catch: (error) => new IsOwnerError({ safe, owner, cause: error })
-      })
+    }): Effect.Effect<boolean, SafeError> =>
+      Effect.promise(() =>
+        publicClient.readContract({
+          address: safe,
+          abi: SAFE_PROXY_ABI,
+          functionName: "isOwner",
+          args: [owner]
+        }) as Promise<boolean>
+      ).pipe(
+        Effect.mapError((error) => new IsOwnerError({ safe, owner, cause: error })),
+        Effect.mapError((e): SafeError => e)
+      )
 
     return {
       buildEnableModuleTx,
