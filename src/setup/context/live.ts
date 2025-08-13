@@ -1,8 +1,8 @@
 import { Effect, Layer } from "effect"
 import { type Address, isAddressEqual } from "viem"
-import { ViemClient } from "../client/service.js"
-import { SafeService } from "../safe/service.js"
-import { isContractDeployedFx } from "../shared/utils.js"
+import { ViemClient } from "../../client/service.js"
+import { SafeService } from "../../safe/service.js"
+import { isContractDeployedFx } from "../../shared/utils.js"
 import type { SetupContextError } from "./errors.js"
 import {
   CalculateSafeAddressError,
