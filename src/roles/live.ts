@@ -11,6 +11,7 @@ import {
   PROXY_BYTECODE_SUFFIX,
   ROLES_V2_MODULE_MASTERCOPY
 } from "./constants.js"
+import type { RoleError } from "./errors.js"
 import {
   BuildAssignRolesTxError,
   BuildDeployModuleTxError,
@@ -39,62 +40,53 @@ export const RoleServiceLive = Layer.effect(
       member: Address
       roleKeys: Array<Hex>
       memberOf: Array<boolean>
-    }): Effect.Effect<TransactionData, BuildAssignRolesTxError> =>
-      Effect.try({
-        try: () => ({
-          to: module,
-          data: encodeFunctionData({
-            abi: ROLES_V2_MODULE_ABI,
-            functionName: "assignRoles",
-            args: [member, roleKeys, memberOf]
-          }),
-          value: "0x0"
-        }),
-        catch: (cause) => new BuildAssignRolesTxError({ module, cause })
-      })
-
-    const buildDeployModuleTx = ({
-      safe,
-      saltNonce
-    }: {
-      safe: Address
-      saltNonce: bigint
-    }): Effect.Effect<TransactionData, BuildDeployModuleTxError> =>
-      Effect.gen(function*() {
-        const moduleAddress = yield* calculateModuleProxyAddress({ safe, saltNonce }).pipe(
-          Effect.mapError((cause) => new BuildDeployModuleTxError({ safe, saltNonce, cause }))
-        )
-
-        const isDeployed = yield* isContractDeployedFx({ client: publicClient, address: moduleAddress })
-
-        if (isDeployed) {
-          return yield* Effect.fail(
-            new BuildDeployModuleTxError({
-              safe,
-              saltNonce,
-              cause: new Error("Module already deployed")
-            })
-          )
-        }
-
-        const initParams = getRolesModuleInitParams(safe)
-
-        const setupData = encodeFunctionData({
+    }): Effect.Effect<TransactionData, RoleError> =>
+      Effect.try((): TransactionData => ({
+        to: module,
+        data: encodeFunctionData({
           abi: ROLES_V2_MODULE_ABI,
-          functionName: "setUp",
-          args: [initParams]
-        })
+          functionName: "assignRoles",
+          args: [member, roleKeys, memberOf]
+        }),
+        value: "0x0"
+      })).pipe(
+        Effect.mapError((cause) => new BuildAssignRolesTxError({ module, cause })),
+        Effect.mapError((e) => e as RoleError)
+      )
 
-        return {
-          to: MODULE_PROXY_FACTORY,
-          data: encodeFunctionData({
-            abi: MODULE_PROXY_FACTORY_ABI,
-            functionName: "deployModule",
-            args: [ROLES_V2_MODULE_MASTERCOPY, setupData, saltNonce]
-          }),
-          value: "0x0"
-        }
-      })
+    const buildDeployModuleTx = (
+      { safe, saltNonce }: { safe: Address; saltNonce: bigint }
+    ): Effect.Effect<TransactionData, RoleError> =>
+      calculateModuleProxyAddress({ safe, saltNonce }).pipe(
+        Effect.mapError((cause) => new BuildDeployModuleTxError({ safe, saltNonce, cause })),
+        Effect.flatMap((moduleAddress) =>
+          Effect.if(isContractDeployedFx({ client: publicClient, address: moduleAddress }), {
+            onTrue: () =>
+              Effect.fail(
+                new BuildDeployModuleTxError({ safe, saltNonce, cause: new Error("Module already deployed") })
+              ),
+            onFalse: () =>
+              Effect.succeed<TransactionData>({
+                to: MODULE_PROXY_FACTORY,
+                data: encodeFunctionData({
+                  abi: MODULE_PROXY_FACTORY_ABI,
+                  functionName: "deployModule",
+                  args: [
+                    ROLES_V2_MODULE_MASTERCOPY,
+                    encodeFunctionData({
+                      abi: ROLES_V2_MODULE_ABI,
+                      functionName: "setUp",
+                      args: [getRolesModuleInitParams(safe)]
+                    }),
+                    saltNonce
+                  ]
+                }),
+                value: "0x0"
+              })
+          })
+        ),
+        Effect.mapError((e): RoleError => e)
+      )
 
     const buildScopeFunctionTx = ({
       conditions,
@@ -110,19 +102,19 @@ export const RoleServiceLive = Layer.effect(
       selector: Hex
       conditions: Array<ConditionFlat>
       executionOpts: ExecutionOptions
-    }): Effect.Effect<TransactionData, BuildScopeFunctionTxError> =>
-      Effect.try({
-        try: () => ({
-          to: module,
-          value: "0x0",
-          data: encodeFunctionData({
-            abi: ROLES_V2_MODULE_ABI,
-            functionName: "scopeFunction",
-            args: [roleKey, target, selector, conditions, executionOpts]
-          })
-        }),
-        catch: (cause) => new BuildScopeFunctionTxError({ module, roleKey, target, selector, cause })
-      })
+    }): Effect.Effect<TransactionData, RoleError> =>
+      Effect.try((): TransactionData => ({
+        to: module,
+        value: "0x0",
+        data: encodeFunctionData({
+          abi: ROLES_V2_MODULE_ABI,
+          functionName: "scopeFunction",
+          args: [roleKey, target, selector, conditions, executionOpts]
+        })
+      })).pipe(
+        Effect.mapError((cause) => new BuildScopeFunctionTxError({ module, roleKey, target, selector, cause })),
+        Effect.mapError((e) => e as RoleError)
+      )
 
     const buildScopeTargetTx = ({
       module,
@@ -132,19 +124,19 @@ export const RoleServiceLive = Layer.effect(
       module: Address
       roleKey: Hex
       target: Address
-    }): Effect.Effect<TransactionData, BuildScopeTargetTxError> =>
-      Effect.try({
-        try: () => ({
-          to: module,
-          value: "0x0",
-          data: encodeFunctionData({
-            abi: ROLES_V2_MODULE_ABI,
-            functionName: "scopeTarget",
-            args: [roleKey, target]
-          })
-        }),
-        catch: (cause) => new BuildScopeTargetTxError({ module, roleKey, target, cause })
-      })
+    }): Effect.Effect<TransactionData, RoleError> =>
+      Effect.try((): TransactionData => ({
+        to: module,
+        value: "0x0",
+        data: encodeFunctionData({
+          abi: ROLES_V2_MODULE_ABI,
+          functionName: "scopeTarget",
+          args: [roleKey, target]
+        })
+      })).pipe(
+        Effect.mapError((cause) => new BuildScopeTargetTxError({ module, roleKey, target, cause })),
+        Effect.mapError((e) => e as RoleError)
+      )
 
     const calculateModuleProxyAddress = ({
       safe,
@@ -152,35 +144,29 @@ export const RoleServiceLive = Layer.effect(
     }: {
       safe: Address
       saltNonce: bigint
-    }): Effect.Effect<Address, CalculateProxyAddressError> =>
-      Effect.try({
-        try: () => {
-          const initParams = getRolesModuleInitParams(safe)
-
-          const setupData = encodeFunctionData({
-            abi: ROLES_V2_MODULE_ABI,
-            functionName: "setUp",
-            args: [initParams]
-          })
-
-          const salt = keccak256(
-            encodePacked(["bytes32", "uint256"], [keccak256(setupData), saltNonce])
-          )
-
-          const bytecode = encodePacked(
-            ["bytes", "address", "bytes"],
-            [PROXY_BYTECODE_PREFIX, ROLES_V2_MODULE_MASTERCOPY, PROXY_BYTECODE_SUFFIX]
-          )
-
-          return getContractAddress({
-            from: MODULE_PROXY_FACTORY,
-            opcode: "CREATE2",
-            salt,
-            bytecode
-          })
-        },
-        catch: (cause) => new CalculateProxyAddressError({ cause })
-      })
+    }): Effect.Effect<Address, RoleError> =>
+      Effect.try((): Address => {
+        const initParams = getRolesModuleInitParams(safe)
+        const setupData = encodeFunctionData({
+          abi: ROLES_V2_MODULE_ABI,
+          functionName: "setUp",
+          args: [initParams]
+        })
+        const salt = keccak256(encodePacked(["bytes32", "uint256"], [keccak256(setupData), saltNonce]))
+        const bytecode = encodePacked(
+          ["bytes", "address", "bytes"],
+          [PROXY_BYTECODE_PREFIX, ROLES_V2_MODULE_MASTERCOPY, PROXY_BYTECODE_SUFFIX]
+        )
+        return getContractAddress({
+          from: MODULE_PROXY_FACTORY,
+          opcode: "CREATE2",
+          salt,
+          bytecode
+        })
+      }).pipe(
+        Effect.mapError((cause) => new CalculateProxyAddressError({ cause })),
+        Effect.mapError((e) => e as RoleError)
+      )
 
     const isModuleDeployed = ({
       safe,
@@ -188,29 +174,27 @@ export const RoleServiceLive = Layer.effect(
     }: {
       safe: Address
       saltNonce: bigint
-    }): Effect.Effect<boolean, IsModuleDeployedError> =>
+    }): Effect.Effect<boolean, RoleError> =>
       calculateModuleProxyAddress({ safe, saltNonce }).pipe(
         Effect.mapError((cause) => new IsModuleDeployedError({ safe, saltNonce, cause })),
-        Effect.flatMap((address) => isContractDeployedFx({ client: publicClient, address }))
+        Effect.flatMap((address) => isContractDeployedFx({ client: publicClient, address })),
+        Effect.mapError((e) => e as RoleError)
       )
 
-    const isModuleEnabled = ({
-      member,
-      module
-    }: {
-      module: Address
-      member: Address
-    }): Effect.Effect<boolean, IsModuleEnabledError> =>
-      Effect.tryPromise({
-        try: () =>
-          publicClient.readContract({
-            address: module,
-            abi: ROLES_V2_MODULE_ABI,
-            functionName: "isModuleEnabled",
-            args: [member]
-          }) as Promise<boolean>,
-        catch: (cause) => new IsModuleEnabledError({ module, member, cause })
-      })
+    const isModuleEnabled = (
+      { member, module }: { module: Address; member: Address }
+    ): Effect.Effect<boolean, RoleError> =>
+      Effect.promise(() =>
+        publicClient.readContract({
+          address: module,
+          abi: ROLES_V2_MODULE_ABI,
+          functionName: "isModuleEnabled",
+          args: [member]
+        }) as Promise<boolean>
+      ).pipe(
+        Effect.mapError((cause) => new IsModuleEnabledError({ module, member, cause })),
+        Effect.mapError((e) => e as RoleError)
+      )
 
     return {
       buildAssignRolesTx,
