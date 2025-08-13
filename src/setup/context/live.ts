@@ -3,6 +3,7 @@ import { type Address, isAddressEqual } from "viem"
 import { ViemClient } from "../../client/service.js"
 import { SafeService } from "../../safe/service.js"
 import { isContractDeployedFx } from "../../shared/utils.js"
+import type { DeployedSafeContext, PredictedSafeContext, ResolvedSafeContext } from "../types.js"
 import type { SetupContextError } from "./errors.js"
 import {
   CalculateSafeAddressError,
@@ -13,7 +14,6 @@ import {
   MissingSaltNonceError
 } from "./errors.js"
 import { ContextService, OneOfOneOwnership, type OwnershipPolicy } from "./service.js"
-import type { DeployedSafeContext, PredictedSafeContext, ResolvedSafeContext } from "./types.js"
 
 export const ContextServiceLive = Layer.effect(
   ContextService,
