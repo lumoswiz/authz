@@ -40,3 +40,30 @@ export type RoleSubgraphStatus = Readonly<{
   selectorsScoped: boolean
   missingSelectors?: ReadonlyArray<Hex>
 }>
+
+export const SetupStage = {
+  DeploySafe: "DeploySafe",
+  DeployModule: "DeployModule",
+  EnableModule: "EnableModule",
+  AssignRoles: "AssignRoles",
+  ScopeTarget: "ScopeTarget",
+  ScopeFunctions: "ScopeFunctions",
+  NothingToDo: "NothingToDo"
+} as const
+
+export type SetupStage = typeof SetupStage[keyof typeof SetupStage]
+
+export const StageOrder: ReadonlyArray<SetupStage> = [
+  SetupStage.DeploySafe,
+  SetupStage.DeployModule,
+  SetupStage.EnableModule,
+  SetupStage.AssignRoles,
+  SetupStage.ScopeTarget,
+  SetupStage.ScopeFunctions,
+  SetupStage.NothingToDo
+] as const
+
+export const stagesFrom = (start: SetupStage): ReadonlyArray<SetupStage> => {
+  const i = StageOrder.indexOf(start)
+  return i < 0 ? [] : StageOrder.slice(i)
+}
