@@ -1,4 +1,5 @@
 import type { Address, Hex } from "viem"
+import type { Operator, ParameterType } from "../roles/types.js"
 
 export const OperationType = {
   Call: 0,
@@ -22,4 +23,11 @@ export enum ExecutionOptions {
   Send = 1,
   DelegateCall = 2,
   Both = 3
+}
+
+export interface ConditionFlat {
+  parent: number
+  paramType: ParameterType
+  operator: Operator
+  compValue: Hex
 }

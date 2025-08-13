@@ -1,12 +1,3 @@
-import type { Hex } from "viem"
-
-export interface ConditionFlat {
-  parent: number
-  paramType: ParameterType
-  operator: Operator
-  compValue: Hex
-}
-
 export enum ParameterType {
   None = 0,
   Static = 1,

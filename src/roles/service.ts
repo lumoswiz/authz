@@ -1,9 +1,8 @@
 import type { Effect } from "effect"
 import { Context } from "effect"
 import type { Address, Hex } from "viem"
-import type { ExecutionOptions, TransactionData } from "../shared/types.js"
+import type { ConditionFlat, ExecutionOptions, TransactionData } from "../shared/types.js"
 import type { RoleError } from "./errors.js"
-import type { ConditionFlat } from "./types.js"
 
 export class RoleService extends Context.Tag("RoleService")<
   RoleService,
@@ -25,7 +24,7 @@ export class RoleService extends Context.Tag("RoleService")<
       roleKey: Hex
       target: Address
       selector: Hex
-      conditions: Array<ConditionFlat>
+      conditions: ReadonlyArray<ConditionFlat>
       executionOpts: ExecutionOptions
     }) => Effect.Effect<TransactionData, RoleError>
 

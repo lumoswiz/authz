@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem"
-import type { ExecutionOptions } from "../shared/types.js"
+import type { ConditionFlat, ExecutionOptions } from "../shared/types.js"
 
 export type PredictedSafeContext = Readonly<{
   safeAddress: Address
@@ -19,7 +19,7 @@ export type ResolvedSafeContext =
 
 export type ScopeConfig = Readonly<{
   selectors: ReadonlyArray<Hex>
-  conditions?: ReadonlyArray<Hex>
+  conditions?: ReadonlyArray<ConditionFlat>
   execOpts?: ExecutionOptions
 }>
 
