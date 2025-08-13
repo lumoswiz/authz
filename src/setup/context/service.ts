@@ -1,8 +1,8 @@
 import type { Effect } from "effect"
 import { Context } from "effect"
 import type { Address } from "viem"
+import type { ResolvedSafeContext } from "../types.js"
 import type { SetupContextError } from "./errors.js"
-import type { ResolvedSafeContext } from "./types.js"
 
 export interface OwnershipPolicy {
   readonly validate: (owners: ReadonlyArray<Address>, expectedSigner: Address) => boolean

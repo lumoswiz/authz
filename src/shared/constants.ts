@@ -1,3 +1,7 @@
+import type { Address } from "viem"
+
+export const ZERO_ADDRESS: Address = "0x0000000000000000000000000000000000000000"
+
 export const CHAINS: Record<number, { name: string; prefix: string }> = {
   1: { name: "mainnet", prefix: "eth" },
   10: { name: "optimism", prefix: "oeth" },
