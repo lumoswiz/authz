@@ -1,5 +1,4 @@
-import type { Effect } from "effect"
-import { Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { Address } from "viem"
 import type { TransactionData } from "../shared/types.js"
 import type { RoleError } from "./errors.js"
