@@ -1,15 +1,11 @@
-import type { Effect } from "effect"
-import { Context } from "effect"
-import type { ResolvedSafeContext, RolesSetupConfig, SetupStage } from "../types.js"
+import { Context, type Effect } from "effect"
+import type { SetupStage } from "../types.js"
 import type { StageError } from "./errors.js"
+import type { DetermineStartStageArgs } from "./types.js"
 
 export class StageService extends Context.Tag("StageService")<
   StageService,
   {
-    determineStartStage: (args: {
-      context: ResolvedSafeContext
-      config: RolesSetupConfig
-      chainId: number
-    }) => Effect.Effect<SetupStage, StageError>
+    determineStartStage: (args: DetermineStartStageArgs) => Effect.Effect<SetupStage, StageError>
   }
 >() {}

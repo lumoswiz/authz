@@ -1,8 +1,8 @@
 import { Effect, Layer } from "effect"
-import type { Address, Hex } from "viem"
+import type { Address } from "viem"
 import { encodeFunctionData, encodePacked, getContractAddress, keccak256 } from "viem"
 import { ViemClient } from "../client/service.js"
-import type { ConditionFlat, ExecutionOptions, TransactionData } from "../shared/types.js"
+import type { TransactionData } from "../shared/types.js"
 import { isContractDeployedFx } from "../shared/utils.js"
 import { MODULE_PROXY_FACTORY_ABI, ROLES_V2_MODULE_ABI } from "./abi.js"
 import {
@@ -22,6 +22,15 @@ import {
   IsModuleEnabledError
 } from "./errors.js"
 import { RoleService } from "./service.js"
+import type {
+  BuildAssignRolesTxArgs,
+  BuildDeployModuleTxArgs,
+  BuildScopeFunctionTxArgs,
+  BuildScopeTargetTxArgs,
+  CalculateModuleProxyAddressArgs,
+  IsModuleDeployedArgs,
+  IsModuleEnabledArgs
+} from "./types.js"
 import { getRolesModuleInitParams } from "./utils.js"
 
 export const RoleServiceLive = Layer.effect(
@@ -34,18 +43,13 @@ export const RoleServiceLive = Layer.effect(
       memberOf,
       module,
       roleKeys
-    }: {
-      module: Address
-      member: Address
-      roleKeys: Array<Hex>
-      memberOf: Array<boolean>
-    }): Effect.Effect<TransactionData, RoleError> =>
+    }: BuildAssignRolesTxArgs): Effect.Effect<TransactionData, RoleError> =>
       Effect.try((): TransactionData => ({
         to: module,
         data: encodeFunctionData({
           abi: ROLES_V2_MODULE_ABI,
           functionName: "assignRoles",
-          args: [member, roleKeys, memberOf]
+          args: [member, [...roleKeys], [...memberOf]]
         }),
         value: "0x0"
       })).pipe(
@@ -54,7 +58,7 @@ export const RoleServiceLive = Layer.effect(
       )
 
     const buildDeployModuleTx = (
-      { safe, saltNonce }: { safe: Address; saltNonce: bigint }
+      { safe, saltNonce }: BuildDeployModuleTxArgs
     ): Effect.Effect<TransactionData, RoleError> =>
       calculateModuleProxyAddress({ safe, saltNonce }).pipe(
         Effect.mapError((cause) => new BuildDeployModuleTxError({ safe, saltNonce, cause })),
@@ -94,21 +98,14 @@ export const RoleServiceLive = Layer.effect(
       roleKey,
       selector,
       target
-    }: {
-      module: Address
-      roleKey: Hex
-      target: Address
-      selector: Hex
-      conditions: ReadonlyArray<ConditionFlat>
-      executionOpts: ExecutionOptions
-    }): Effect.Effect<TransactionData, RoleError> =>
+    }: BuildScopeFunctionTxArgs): Effect.Effect<TransactionData, RoleError> =>
       Effect.try((): TransactionData => ({
         to: module,
         value: "0x0",
         data: encodeFunctionData({
           abi: ROLES_V2_MODULE_ABI,
           functionName: "scopeFunction",
-          args: [roleKey, target, selector, conditions, executionOpts]
+          args: [roleKey, target, selector, [...conditions], executionOpts]
         })
       })).pipe(
         Effect.mapError((cause) => new BuildScopeFunctionTxError({ module, roleKey, target, selector, cause })),
@@ -119,11 +116,7 @@ export const RoleServiceLive = Layer.effect(
       module,
       roleKey,
       target
-    }: {
-      module: Address
-      roleKey: Hex
-      target: Address
-    }): Effect.Effect<TransactionData, RoleError> =>
+    }: BuildScopeTargetTxArgs): Effect.Effect<TransactionData, RoleError> =>
       Effect.try((): TransactionData => ({
         to: module,
         value: "0x0",
@@ -140,10 +133,7 @@ export const RoleServiceLive = Layer.effect(
     const calculateModuleProxyAddress = ({
       safe,
       saltNonce
-    }: {
-      safe: Address
-      saltNonce: bigint
-    }): Effect.Effect<Address, RoleError> =>
+    }: CalculateModuleProxyAddressArgs): Effect.Effect<Address, RoleError> =>
       Effect.try((): Address => {
         const initParams = getRolesModuleInitParams(safe)
         const setupData = encodeFunctionData({
@@ -170,10 +160,7 @@ export const RoleServiceLive = Layer.effect(
     const isModuleDeployed = ({
       safe,
       saltNonce
-    }: {
-      safe: Address
-      saltNonce: bigint
-    }): Effect.Effect<boolean, RoleError> =>
+    }: IsModuleDeployedArgs): Effect.Effect<boolean, RoleError> =>
       calculateModuleProxyAddress({ safe, saltNonce }).pipe(
         Effect.mapError((cause) => new IsModuleDeployedError({ safe, saltNonce, cause })),
         Effect.flatMap((address) => isContractDeployedFx({ client: publicClient, address })),
@@ -181,7 +168,7 @@ export const RoleServiceLive = Layer.effect(
       )
 
     const isModuleEnabled = (
-      { member, module }: { module: Address; member: Address }
+      { member, module }: IsModuleEnabledArgs
     ): Effect.Effect<boolean, RoleError> =>
       Effect.promise(() =>
         publicClient.readContract({

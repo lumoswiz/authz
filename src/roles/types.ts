@@ -1,3 +1,6 @@
+import type { Address, Hex } from "viem"
+import type { ConditionFlat, ExecutionOptions } from "../shared/types.js"
+
 export enum ParameterType {
   None = 0,
   Static = 1,
@@ -42,3 +45,41 @@ export enum Operator {
   CallWithinAllowance = 30,
   _Placeholder31 = 31
 }
+
+export interface RolesModuleArgs {
+  readonly module: Address
+}
+
+export interface RolesModuleMemberArgs extends RolesModuleArgs {
+  readonly member: Address
+}
+
+export interface RolesSafeSaltArgs {
+  readonly safe: Address
+  readonly saltNonce: bigint
+}
+
+export interface AssignRolesArgs extends RolesModuleArgs {
+  readonly member: Address
+  readonly roleKeys: ReadonlyArray<Hex>
+  readonly memberOf: ReadonlyArray<boolean>
+}
+
+export interface ScopeTargetArgs extends RolesModuleArgs {
+  readonly roleKey: Hex
+  readonly target: Address
+}
+
+export interface ScopeFunctionArgs extends ScopeTargetArgs {
+  readonly selector: Hex
+  readonly conditions: ReadonlyArray<ConditionFlat>
+  readonly executionOpts: ExecutionOptions
+}
+
+export type BuildAssignRolesTxArgs = AssignRolesArgs
+export type BuildDeployModuleTxArgs = RolesSafeSaltArgs
+export type BuildScopeFunctionTxArgs = ScopeFunctionArgs
+export type BuildScopeTargetTxArgs = ScopeTargetArgs
+export type CalculateModuleProxyAddressArgs = RolesSafeSaltArgs
+export type IsModuleDeployedArgs = RolesSafeSaltArgs
+export type IsModuleEnabledArgs = RolesModuleMemberArgs

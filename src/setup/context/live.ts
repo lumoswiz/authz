@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect"
-import { type Address, isAddressEqual } from "viem"
+import { isAddressEqual } from "viem"
 import { ViemClient } from "../../client/service.js"
 import { SafeService } from "../../safe/service.js"
 import { isContractDeployedFx } from "../../shared/utils.js"
@@ -13,7 +13,9 @@ import {
   InvalidSafeOwnershipError,
   MissingSaltNonceError
 } from "./errors.js"
-import { ContextService, OneOfOneOwnership, type OwnershipPolicy } from "./service.js"
+import { ContextService } from "./service.js"
+import type { ResolveArgs } from "./types.js"
+import { OneOfOneOwnership } from "./utils.js"
 
 export const ContextServiceLive = Layer.effect(
   ContextService,
@@ -22,12 +24,7 @@ export const ContextServiceLive = Layer.effect(
     const safeSvc = yield* SafeService
 
     const resolve = (
-      { maybeSaltNonce, owner, policy, safe }: {
-        safe: Address
-        owner: Address
-        maybeSaltNonce?: bigint
-        policy?: OwnershipPolicy
-      }
+      { maybeSaltNonce, owner, policy, safe }: ResolveArgs
     ): Effect.Effect<ResolvedSafeContext, SetupContextError> => {
       const p = policy ?? OneOfOneOwnership
 

@@ -28,7 +28,17 @@ import {
   IsOwnerError
 } from "./errors.js"
 import { SafeService } from "./service.js"
-import type { SafeTransactionData } from "./types.js"
+import type {
+  BuildEnableModuleTxArgs,
+  BuildExecTransactionArgs,
+  BuildSafeDeploymentTxArgs,
+  BuildSafeTransactionDataArgs,
+  CalculateSafeAddressArgs,
+  GetSafeTransactionHashArgs,
+  IsModuleEnabledArgs,
+  SafeOwnerArgs,
+  SafeTransactionData
+} from "./types.js"
 
 export const SafeServiceLive = Layer.effect(
   SafeService,
@@ -38,10 +48,7 @@ export const SafeServiceLive = Layer.effect(
     const buildEnableModuleTx = ({
       module,
       safe
-    }: {
-      safe: Address
-      module: Address
-    }) =>
+    }: BuildEnableModuleTxArgs) =>
       Effect.sync((): TransactionData => ({
         to: safe,
         value: "0x0",
@@ -55,10 +62,7 @@ export const SafeServiceLive = Layer.effect(
     const buildSafeDeploymentTx = ({
       owner,
       saltNonce
-    }: {
-      owner: Address
-      saltNonce: bigint
-    }): Effect.Effect<TransactionData, SafeError> =>
+    }: BuildSafeDeploymentTxArgs): Effect.Effect<TransactionData, SafeError> =>
       Effect.try((): TransactionData => {
         const setupData = encodeFunctionData({
           abi: SAFE_SINGLETON_ABI,
@@ -89,11 +93,7 @@ export const SafeServiceLive = Layer.effect(
       safe,
       signatures,
       tx
-    }: {
-      safe: Address
-      tx: SafeTransactionData
-      signatures: Hex
-    }) =>
+    }: BuildExecTransactionArgs) =>
       Effect.sync((): TransactionData => ({
         to: safe,
         value: "0x0",
@@ -121,13 +121,7 @@ export const SafeServiceLive = Layer.effect(
       safe,
       to,
       useOnChainNonce = true
-    }: {
-      safe: Address
-      to: Address
-      data: Hex
-      operation?: OperationType
-      useOnChainNonce?: boolean
-    }): Effect.Effect<SafeTransactionData, SafeError> =>
+    }: BuildSafeTransactionDataArgs): Effect.Effect<SafeTransactionData, SafeError> =>
       getNonce(safe, useOnChainNonce).pipe(
         Effect.map((nonce): SafeTransactionData => ({
           to,
@@ -175,10 +169,7 @@ export const SafeServiceLive = Layer.effect(
     const calculateSafeAddress = ({
       owners,
       saltNonce
-    }: {
-      owners: Array<Address>
-      saltNonce: bigint
-    }): Effect.Effect<Address, SafeError> =>
+    }: CalculateSafeAddressArgs): Effect.Effect<Address, SafeError> =>
       Effect.promise(async (): Promise<Address> => {
         const proxyCreationCode = await publicClient.readContract({
           address: SAFE_PROXY_FACTORY,
@@ -269,12 +260,7 @@ export const SafeServiceLive = Layer.effect(
       safe,
       tx,
       version
-    }: {
-      safe: Address
-      tx: SafeTransactionData
-      version: string
-      chainId: number
-    }): Effect.Effect<Hex, SafeError> =>
+    }: GetSafeTransactionHashArgs): Effect.Effect<Hex, SafeError> =>
       Effect.if(isContractDeployedFx({ client: publicClient, address: safe }), {
         onTrue: () =>
           Effect.promise(() =>
@@ -313,10 +299,7 @@ export const SafeServiceLive = Layer.effect(
     const isModuleEnabled = ({
       module,
       safe
-    }: {
-      safe: Address
-      module: Address
-    }): Effect.Effect<boolean, SafeError> =>
+    }: IsModuleEnabledArgs): Effect.Effect<boolean, SafeError> =>
       Effect.promise(() =>
         publicClient.readContract({
           address: safe,
@@ -332,10 +315,7 @@ export const SafeServiceLive = Layer.effect(
     const isOwner = ({
       owner,
       safe
-    }: {
-      owner: Address
-      safe: Address
-    }): Effect.Effect<boolean, SafeError> =>
+    }: SafeOwnerArgs): Effect.Effect<boolean, SafeError> =>
       Effect.promise(() =>
         publicClient.readContract({
           address: safe,

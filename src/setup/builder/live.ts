@@ -1,15 +1,15 @@
 import { Effect, Layer } from "effect"
-import type { Address } from "viem"
 import { RoleService } from "../../roles/service.js"
 import { SafeService } from "../../safe/service.js"
 import { ExecutionOptions, type MetaTransactionData, OperationType, type TransactionData } from "../../shared/types.js"
 import { DEFAULT_ROLES_NONCE } from "../constants.js"
 import { StageService } from "../stage/service.js"
 import { SetupStage } from "../types.js"
-import type { ResolvedSafeContext, RolesSetupConfig, SetupStage as SetupStageT } from "../types.js"
+import type { SetupStage as SetupStageT } from "../types.js"
 import { append } from "../utils.js"
 import { type BuilderError, CalculateModuleAddressForBuilderError } from "./errors.js"
 import { BuilderService } from "./service.js"
+import type { BuildAllTxArgs } from "./types.js"
 import { buildPlan, validateForStart } from "./utils.js"
 
 export const BuilderServiceLive = Layer.effect(
@@ -25,16 +25,7 @@ export const BuilderServiceLive = Layer.effect(
       context,
       options = {},
       owner
-    }: {
-      context: ResolvedSafeContext
-      owner: Address
-      config: RolesSetupConfig
-      options?: {
-        extraSetupTxs?: ReadonlyArray<TransactionData>
-        extraMultisendTxs?: ReadonlyArray<MetaTransactionData>
-      }
-      chainId: number
-    }): Effect.Effect<
+    }: BuildAllTxArgs): Effect.Effect<
       { setupTxs: Array<TransactionData>; multisendTxs: Array<MetaTransactionData> },
       BuilderError
     > =>

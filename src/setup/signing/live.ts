@@ -6,7 +6,6 @@ import { MultiSendService } from "../../multisend/service.js"
 import { generateSafeTypedData } from "../../safe/eip712.js"
 import { SafeService } from "../../safe/service.js"
 import type { SafeTransactionData } from "../../safe/types.js"
-import type { MetaTransactionData } from "../../shared/types.js"
 import { OperationType } from "../../shared/types.js"
 import { SAFE_VERSION_FALLBACK } from "./constants.js"
 import {
@@ -18,6 +17,7 @@ import {
   SignTypedDataForSigningError
 } from "./errors.js"
 import { SigningService } from "./service.js"
+import type { SignMultisendTxArgs, SignTxArgs } from "./types.js"
 
 export const SigningServiceLive = Layer.effect(
   SigningService,
@@ -61,11 +61,7 @@ export const SigningServiceLive = Layer.effect(
       account,
       safe: safeAddress,
       txData
-    }: {
-      safe: Address
-      txData: SafeTransactionData
-      account: Account
-    }): Effect.Effect<Hex, SigningError> =>
+    }: SignTxArgs): Effect.Effect<Hex, SigningError> =>
       safe.getVersion(safeAddress).pipe(
         Effect.mapError((cause) => new GetVersionForSigningError({ safe: safeAddress, cause })),
         Effect.flatMap((version) =>
@@ -84,12 +80,7 @@ export const SigningServiceLive = Layer.effect(
       isDeployed = true,
       multisendTxs,
       safe: safeAddress
-    }: {
-      safe: Address
-      multisendTxs: ReadonlyArray<MetaTransactionData>
-      account: Account
-      isDeployed?: boolean
-    }): Effect.Effect<{ txData: SafeTransactionData; signature: Hex }, SigningError> =>
+    }: SignMultisendTxArgs): Effect.Effect<{ txData: SafeTransactionData; signature: Hex }, SigningError> =>
       multisend.encodeMulti(multisendTxs).pipe(
         Effect.mapError((cause) => new EncodeMultiForSigningError({ cause })),
         Effect.flatMap(({ data, to }) =>

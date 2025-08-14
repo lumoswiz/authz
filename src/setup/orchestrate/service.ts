@@ -1,5 +1,4 @@
-import type { Effect } from "effect"
-import { Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { OrchestrateError } from "./errors.js"
 import type { OrchestrateArgs, OrchestrateResult } from "./types.js"
 

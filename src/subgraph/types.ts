@@ -1,4 +1,4 @@
-import type { Hex } from "viem"
+import type { Address, Hex } from "viem"
 import type { ExecutionOptions } from "../shared/types.js"
 
 export interface Annotation {
@@ -59,4 +59,10 @@ export interface RawSubgraphRole {
   }>
   annotations: Array<Annotation>
   lastUpdate: number
+}
+
+export interface FetchRoleArgs {
+  readonly chainId: number
+  readonly moduleAddress: Address
+  readonly roleKey: Hex
 }
