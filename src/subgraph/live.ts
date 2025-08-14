@@ -2,13 +2,13 @@ import { Effect, Layer } from "effect"
 import { ROLE_QUERY, SUBGRAPH_URL } from "./constants.js"
 import { FetchSubgraphError } from "./errors.js"
 import { SubgraphService } from "./service.js"
-import type { RawSubgraphRole } from "./types.js"
+import type { FetchRoleArgs, RawSubgraphRole } from "./types.js"
 import { getRoleIdForSubgraph, mapGraphQlRole } from "./utils.js"
 
 export const SubgraphServiceLive = Layer.effect(
   SubgraphService,
   Effect.succeed({
-    fetchRole: ({ chainId, moduleAddress, roleKey }) =>
+    fetchRole: ({ chainId, moduleAddress, roleKey }: FetchRoleArgs) =>
       Effect.gen(function*() {
         const id = yield* getRoleIdForSubgraph(chainId, moduleAddress, roleKey)
 
