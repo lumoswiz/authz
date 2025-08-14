@@ -100,7 +100,7 @@ export const RoleServiceLive = Layer.effect(
       roleKey: Hex
       target: Address
       selector: Hex
-      conditions: Array<ConditionFlat>
+      conditions: ReadonlyArray<ConditionFlat>
       executionOpts: ExecutionOptions
     }): Effect.Effect<TransactionData, RoleError> =>
       Effect.try((): TransactionData => ({
