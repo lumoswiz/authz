@@ -1,5 +1,4 @@
-import type { Effect } from "effect"
-import { Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { ExecError } from "./errors.js"
 import type { ExecResult, ExecuteArgs } from "./types.js"
 
