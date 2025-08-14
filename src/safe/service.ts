@@ -1,58 +1,38 @@
 import type { Effect } from "effect"
 import { Context } from "effect"
 import type { Address, Hex } from "viem"
-import type { OperationType, TransactionData } from "../shared/types.js"
+import type { TransactionData } from "../shared/types.js"
 import type { SafeError } from "./errors.js"
-import type { SafeTransactionData } from "./types.js"
+import type {
+  BuildEnableModuleTxArgs,
+  BuildExecTransactionArgs,
+  BuildSafeDeploymentTxArgs,
+  BuildSafeTransactionDataArgs,
+  BuildSignSafeTxArgs,
+  CalculateSafeAddressArgs,
+  GetSafeTransactionHashArgs,
+  IsModuleEnabledArgs,
+  SafeOwnerArgs,
+  SafeTransactionData
+} from "./types.js"
 
 export class SafeService extends Context.Tag("SafeService")<
   SafeService,
   {
-    buildEnableModuleTx: (args: {
-      safe: Address
-      module: Address
-    }) => Effect.Effect<TransactionData, never>
-    buildExecTransaction: (args: {
-      safe: Address
-      tx: SafeTransactionData
-      signatures: Hex
-    }) => Effect.Effect<TransactionData, never>
-    buildSafeDeploymentTx: (args: {
-      owner: Address
-      saltNonce: bigint
-    }) => Effect.Effect<TransactionData, SafeError>
-    buildSafeTransactionData: (args: {
-      safe: Address
-      to: Address
-      data: Hex
-      operation?: OperationType
-      useOnChainNonce?: boolean
-    }) => Effect.Effect<SafeTransactionData, SafeError>
-    buildSignSafeTx: (args: {
-      safe: Address
-      to: Address
-      data: Hex
-      operation?: OperationType
-      useOnChainNonce?: boolean
-    }) => Effect.Effect<{
-      txData: SafeTransactionData
-      safeTxHash: Hex
-    }, SafeError>
-    calculateSafeAddress: (args: {
-      owners: Array<Address>
-      saltNonce: bigint
-    }) => Effect.Effect<Address, SafeError>
+    buildEnableModuleTx: (args: BuildEnableModuleTxArgs) => Effect.Effect<TransactionData, never>
+    buildExecTransaction: (args: BuildExecTransactionArgs) => Effect.Effect<TransactionData, never>
+    buildSafeDeploymentTx: (args: BuildSafeDeploymentTxArgs) => Effect.Effect<TransactionData, SafeError>
+    buildSafeTransactionData: (args: BuildSafeTransactionDataArgs) => Effect.Effect<SafeTransactionData, SafeError>
+    buildSignSafeTx: (
+      args: BuildSignSafeTxArgs
+    ) => Effect.Effect<{ txData: SafeTransactionData; safeTxHash: Hex }, SafeError>
+    calculateSafeAddress: (args: CalculateSafeAddressArgs) => Effect.Effect<Address, SafeError>
     getNonce: (safe: Address, useOnChainNonce: boolean) => Effect.Effect<bigint, SafeError>
     getOwners: (safe: Address) => Effect.Effect<Array<Address>, SafeError>
-    getSafeTransactionHash: (args: {
-      safe: Address
-      tx: SafeTransactionData
-      version: string
-      chainId: number
-    }) => Effect.Effect<Hex, SafeError>
+    getSafeTransactionHash: (args: GetSafeTransactionHashArgs) => Effect.Effect<Hex, SafeError>
     getThreshold: (safe: Address) => Effect.Effect<bigint, SafeError>
     getVersion: (safe: Address) => Effect.Effect<string, SafeError>
-    isModuleEnabled: (args: { safe: Address; module: Address }) => Effect.Effect<boolean, SafeError>
-    isOwner: (args: { safe: Address; owner: Address }) => Effect.Effect<boolean, SafeError>
+    isModuleEnabled: (args: IsModuleEnabledArgs) => Effect.Effect<boolean, SafeError>
+    isOwner: (args: SafeOwnerArgs) => Effect.Effect<boolean, SafeError>
   }
 >() {}
