@@ -31,7 +31,7 @@ export const ExecServiceLive = Layer.effect(
       ).pipe(Effect.mapError((cause) => new BroadcastError({ safe: args.safeForErrors, cause })))
 
     const waitReceipt = (hash: Hex, safe: Address) =>
-      Effect.tryPromise(() => publicClient.waitForTransactionReceipt({ hash })).pipe(
+      Effect.tryPromise(() => client.waitForTransactionReceipt({ hash })).pipe(
         Effect.mapError((cause) => new WaitReceiptError({ safe, hash, cause })),
         Effect.as(hash)
       )
