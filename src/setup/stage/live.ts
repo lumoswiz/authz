@@ -3,10 +3,9 @@ import type { Address, Hex } from "viem"
 import { RoleService } from "../../roles/service.js"
 import { SafeService } from "../../safe/service.js"
 import { SubgraphService } from "../../subgraph/service.js"
-import type { SubgraphRole } from "../../subgraph/types.js"
 import { DEFAULT_ROLES_NONCE } from "../constants.js"
 import { SetupStage } from "../types.js"
-import type { ResolvedSafeContext, RolesSetupConfig, RoleSubgraphStatus, SetupStage as SetupStageT } from "../types.js"
+import type { RolesSetupConfig, SetupStage as SetupStageT } from "../types.js"
 import {
   StageCalculateProxyAddressError,
   type StageError,
@@ -16,6 +15,8 @@ import {
   StageMissingRoleKeyError
 } from "./errors.js"
 import { StageService } from "./service.js"
+import type { DetermineStartStageArgs } from "./types.js"
+import { getRoleSubgraphStatus } from "./utils.js"
 
 export const StageServiceLive = Layer.effect(
   StageService,
@@ -25,7 +26,7 @@ export const StageServiceLive = Layer.effect(
     const subgraph = yield* SubgraphService
 
     const determineStartStage = (
-      { chainId, config, context }: { context: ResolvedSafeContext; config: RolesSetupConfig; chainId: number }
+      { chainId, config, context }: DetermineStartStageArgs
     ): Effect.Effect<SetupStageT, StageError> => {
       const safe = context.safeAddress
       const rolesNonce = config.rolesNonce ?? DEFAULT_ROLES_NONCE
@@ -98,25 +99,3 @@ export const StageServiceLive = Layer.effect(
     return { determineStartStage }
   })
 )
-
-function getRoleSubgraphStatus(
-  role: SubgraphRole,
-  member: Address,
-  target: Address,
-  selectors: ReadonlyArray<Hex>
-): RoleSubgraphStatus {
-  const assigned = role.members.length > 0
-  const assignedToMember = role.members.some((m) => m.address.toLowerCase() === member.toLowerCase())
-  const scopedTarget = role.targets.find((t) => t.address.toLowerCase() === target.toLowerCase())
-  const targetScoped = !!scopedTarget
-  const scopedSelectors = new Set(scopedTarget?.functions.map((f) => f.selector.toLowerCase()) ?? [])
-  const normalized = selectors.map((s) => s.toLowerCase() as Hex)
-  const missing = normalized.filter((sel) => !scopedSelectors.has(sel))
-  return {
-    assigned,
-    assignedToMember,
-    targetScoped,
-    selectorsScoped: missing.length === 0,
-    ...(missing.length > 0 ? { missingSelectors: missing as ReadonlyArray<Hex> } : {})
-  }
-}
