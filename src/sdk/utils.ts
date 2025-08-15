@@ -4,8 +4,7 @@ import { createPublicClient } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { getSupportedChainById } from "../client/chain.js"
 import type { ChainResolutionError, TransportBuildError } from "../client/errors.js"
-import { defaultTransport, makeTransport } from "../client/transport.js"
-import type { SdkTransportConfig } from "../client/types.js"
+import { buildTransport } from "../client/transport.js"
 import {
   ConstructorChainExtractionError,
   type ConstructorError,
@@ -31,13 +30,8 @@ export const buildPublicClient = (
   args: ConstructorArgs
 ): Effect.Effect<PublicClient, ConstructorError, never> =>
   Effect.gen(function*() {
-    const chain = yield* getSupportedChainById(args.chainId).pipe(
-      Effect.mapError(mapChainResolutionError)
-    )
-    const cfg: SdkTransportConfig = args.transport ?? defaultTransport
-    const transport = yield* makeTransport(cfg).pipe(
-      Effect.mapError(mapTransportError)
-    )
+    const chain = yield* getSupportedChainById(args.chain).pipe(Effect.mapError(mapChainResolutionError))
+    const transport = yield* buildTransport(args.transport).pipe(Effect.mapError(mapTransportError))
     const client: PublicClient = createPublicClient({ chain, transport })
     return client
   })
