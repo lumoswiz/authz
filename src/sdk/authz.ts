@@ -1,19 +1,23 @@
 import { Effect } from "effect"
-import type { Address, PublicClient } from "viem"
+import { type Address } from "viem"
+
 import { RoleService } from "../roles/service.js"
 import { SafeService } from "../safe/service.js"
 import { ContextService } from "../setup/context/service.js"
 import type { ExecResult } from "../setup/execute/types.js"
 import { OrchestrateService } from "../setup/orchestrate/service.js"
+
 import { makeSetupRuntime } from "./runtime.js"
-import type { RunSetupArgs } from "./types.js"
+import type { ConstructorArgs, RunSetupArgs } from "./types.js"
+import { buildPublicClient } from "./utils.js"
 
 export class Authz {
   private readonly run: <A, E>(
     eff: Effect.Effect<A, E, OrchestrateService | SafeService | RoleService | ContextService>
   ) => Promise<A>
 
-  constructor(publicClient: PublicClient) {
+  constructor(args: ConstructorArgs) {
+    const publicClient = Effect.runSync(buildPublicClient(args))
     this.run = makeSetupRuntime(publicClient).run
   }
 
