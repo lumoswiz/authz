@@ -1,5 +1,7 @@
 import { Effect } from "effect"
-import { createPublicClient, type PublicClient } from "viem"
+import type { Account, Hex, PublicClient } from "viem"
+import { createPublicClient } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
 import { getSupportedChainById } from "../client/chain.js"
 import type { ChainResolutionError, TransportBuildError } from "../client/errors.js"
 import { defaultTransport, makeTransport } from "../client/transport.js"
@@ -8,9 +10,10 @@ import {
   ConstructorChainExtractionError,
   type ConstructorError,
   ConstructorTransportBuildError,
-  ConstructorUnsupportedChainIdError
+  ConstructorUnsupportedChainIdError,
+  PrivateKeyAccountError
 } from "./errors.js"
-import type { ConstructorArgs } from "./types.js"
+import type { AccountInput, ConstructorArgs } from "./types.js"
 
 const mapChainResolutionError = (e: ChainResolutionError): ConstructorError => {
   switch (e._tag) {
@@ -38,3 +41,13 @@ export const buildPublicClient = (
     const client: PublicClient = createPublicClient({ chain, transport })
     return client
   })
+
+export const resolveAccount = (
+  input: AccountInput
+): Effect.Effect<Account, PrivateKeyAccountError, never> =>
+  (typeof input === "object" && input !== null && "privateKey" in input)
+    ? Effect.try({
+      try: () => privateKeyToAccount((input as { privateKey: Hex }).privateKey),
+      catch: (cause) => new PrivateKeyAccountError({ cause })
+    })
+    : Effect.succeed(input as Account)
