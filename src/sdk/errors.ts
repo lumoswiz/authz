@@ -18,3 +18,9 @@ export class ConstructorChainExtractionError extends Data.TaggedError("Construct
 export class ConstructorTransportBuildError extends Data.TaggedError("ConstructorTransportBuildError")<{
   readonly cause: unknown
 }> {}
+
+export type AccountError = PrivateKeyAccountError
+
+export class PrivateKeyAccountError extends Data.TaggedError("PrivateKeyAccountError")<{
+  readonly cause: unknown
+}> {}
