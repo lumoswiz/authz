@@ -1,5 +1,5 @@
-import type { SubgraphRole } from "src/subgraph/types.js"
 import type { Address, Hex } from "viem"
+import type { SubgraphRole } from "../../subgraph/types.js"
 import type { RoleSubgraphStatus } from "../types.js"
 
 export function getRoleSubgraphStatus(
