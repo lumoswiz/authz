@@ -12,7 +12,7 @@ async function main() {
   if (!RPC_URL || !PRIVATE_KEY) throw new Error("RPC_URL and PRIVATE_KEY must be set")
   const account = privateKeyToAccount(PRIVATE_KEY)
 
-  const authz = new Authz({ account, chainId: 11155111, transport: { type: "http", url: RPC_URL } })
+  const authz = new Authz({ account, chain: 11155111, transport: RPC_URL })
 
   const SAFE: Address = "0x0DE8D7F18D3b9887903dc8CE4198436B7fC1e7fd"
   const SAFE_SALT_NONCE: bigint | undefined = undefined
