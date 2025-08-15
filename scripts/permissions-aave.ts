@@ -1,8 +1,6 @@
 import "dotenv/config"
-import { createPublicClient, http } from "viem"
 import type { Address, Hex } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { sepolia } from "viem/chains"
 import { Authz } from "../src/sdk/authz.js"
 import type { RunSetupArgs } from "../src/sdk/types.js"
 import { DEFAULT_ROLES_NONCE } from "../src/setup/constants.js"
@@ -12,10 +10,12 @@ async function main() {
   const RPC_URL = process.env.RPC_URL!
   const PRIVATE_KEY = process.env.PRIVATE_KEY! as Hex
   if (!RPC_URL || !PRIVATE_KEY) throw new Error("RPC_URL and PRIVATE_KEY must be set")
-
-  const publicClient = createPublicClient({ chain: sepolia, transport: http(RPC_URL) })
   const account = privateKeyToAccount(PRIVATE_KEY)
-  const authz = new Authz(publicClient)
+
+  const authz = new Authz({
+    chainId: 11155111,
+    transport: { type: "http", url: RPC_URL }
+  })
 
   const SAFE: Address = "0x0DE8D7F18D3b9887903dc8CE4198436B7fC1e7fd"
   const SAFE_SALT_NONCE: bigint | undefined = undefined
